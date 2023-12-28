@@ -1,7 +1,10 @@
+import telethon.types
 from telethon import events, TelegramClient
 
 from literallyme.pack_creation import create_sticker_pack, documents_from_directory
+from utils import upload_file
 import db
+from charts import get_charts
 
 
 async def get_videos(bot, pack) -> list[(id, id, bytes)]:
@@ -48,3 +51,11 @@ def apply_handlers(bot: TelegramClient):
 
         await bot.send_message(event.sender_id, 'This is literally you:')
         await bot.send_file(event.sender_id, first_sticker)
+
+    @bot.on(events.NewMessage(pattern='/fancy_charts', func=lambda e: e.sender.username in ('ennucore', 'mb_ass')))
+    async def send_stats(event):
+        charts = get_charts(db.mongo)
+        for chart in charts:
+            await bot.send_file(event.sender, chart, force_document=False, caption='Chart')
+
+
