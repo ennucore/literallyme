@@ -1,0 +1,35 @@
+import argparse
+
+parser = argparse.ArgumentParser()
+
+# from cli import add_args
+# add_args(parser)
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-f', '--face', help='use this face', dest='face', default="face.jpg")
+parser.add_argument('-t', '--target', help='replace this face. If camera, use integer like 0',default="0", dest='target_path')
+parser.add_argument('-o', '--output', help='path to output of the video',default="video.mp4", dest='output')
+parser.add_argument('--threads', help='amount of gpu threads',default="4", dest='threads')
+parser.add_argument('--image', help='Include if the target is image', dest='image', action='store_true')
+parser.add_argument('--cli', help='run in cli mode, turns off preview and now accepts switch of face enhancer from the command', dest='cli', action='store_true')
+parser.add_argument('--face-enhancer', help='face enhancer, choice works only in cli mode. In gui mode, you need to choose from gui', dest='face_enhancer', default='none', choices=['none','gfpgan', 'ffe', 'codeformer', 'gpfgan_onnx', 'real_esrgan'])
+parser.add_argument('--no-face-swapper', '--no-swapper', help='disables face swapper', dest='no_faceswap', action='store_true')
+#parser.add_argument('--preview-mode', help='experimental: preview mode', dest='preview', action='store_true')
+parser.add_argument('--experimental', help='experimental mode, enables features like buffered video reader', dest='experimental', action='store_true')
+parser.add_argument('--nocuda','--no-cuda', help='no cuda should be used', dest='nocuda', action='store_true')
+parser.add_argument('--low-memory', '--lowmem', help='low memory usage attempt', dest='lowmem', action='store_true')
+parser.add_argument('--batch', help='batch processing mode, after the argument write which suffix should the output files have', dest='batch', default='')
+#parser.add_argument('--extract-target-frames', help='extract frames from target video. After argument write the path to folder', dest='extract_target', default="")
+parser.add_argument('--extract-output-frames', help='extract frames from output video. After argument write the path to folder', dest='extract_output', default="")
+parser.add_argument('--codeformer-fidelity', help='sets up codeformer\'s fidelity if used with cli mode',default=0.1, dest='codeformer_fidelity')
+parser.add_argument('--blend', help='works with cli, blending amount from 0.0 to 1.0', default=1.0, dest='alpha')
+parser.add_argument('--codeformer-skip_if_no_face', help='works only in cli. Skip codeformer if no face found', dest='codeformer_skip_if_no_face', action='store_true')
+parser.add_argument('--codeformer-face-upscale', help='works only in cli. Upscale the face using codeformer', dest='codeformer_face_upscale', action='store_true')
+parser.add_argument('--codeformer-background-enhance', help='works only in cli. Enhance the background using codeformer', dest='codeformer_background_enhance', action='store_true')
+parser.add_argument('--codeformer-upscale', help='works with cli, the amount of upscale to apply to the frame using codeformer', default=1, dest='codeformer_upscale')
+parser.add_argument('--select-face', help='change the face you want, not all faces. After the argument add the path to the image with face from the video', dest='selective', default='')
+parser.add_argument('--optimization', help='choose the mode of the model: fp32 (default), fp16 (smaller, might be faster), int8 (doesnt work properly on old gpus, I dont know about new once, please test. On old gpus it uses cpu)', dest='optimization', default='fp32', choices=['fp32','fp16', 'int8'])
+parser.add_argument('--fast-load', help='try to load as fast as possible, may be delays in the work, shouldnt affect the speed of processing', dest='fastload', action='store_true')
+parser.add_argument("--bbox-adjust", help='adjustements to do for the box: x1,y1 coords of left top corner and x2,y2 are bottom right. Give in the form x1xy1xx2xy2 (default: 50x50x50x50)', default='50x50x50x50',dest='bbox_adjust')
+parser.add_argument("--apple", help='just in case you are an apple user, you can finally use FFS', action='store_true', dest="apple")

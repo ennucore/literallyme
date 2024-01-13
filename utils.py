@@ -1,47 +1,57 @@
-
 import globalsz
 import threading
+
 
 def prepare():
     def mish_activation(x):
         return x * tf.keras.activations.tanh(tf.keras.activations.softplus(x))
+
     class Mish(tf.keras.layers.Layer):
         def __init__(self, **kwargs):
             super(Mish, self).__init__()
+
         def call(self, inputs):
             return mish_activation(inputs)
+
     tf.keras.utils.get_custom_objects().update({'Mish': Mish})
+
+
 def fastloadimporter():
     global torch, cv2, gpu_memory_total, tf, device
     import torch
     import cv2
-    
+
     if not globalsz.args['nocuda'] and not globalsz.args['apple']:
         device = torch.device(0)
-        gpu_memory_total = round(torch.cuda.get_device_properties(device).total_memory / 1024**3,2)  # Convert bytes to GB
+        gpu_memory_total = round(torch.cuda.get_device_properties(device).total_memory / 1024 ** 3,
+                                 2)  # Convert bytes to GB
     elif globalsz.args['apple']:
         device = torch.device('mps')
     if not globalsz.args['lowmem']:
         import tensorflow as tf
         prepare()
+
+
 if globalsz.args['fastload']:
     wait_thread = threading.Thread(target=fastloadimporter)
     wait_thread.start()
-import subprocess 
+import subprocess
 from threading import Thread
 import onnxruntime as rt
 import insightface
 import cv2
 import numpy as np
 import time
+
 if not globalsz.args['cli']:
     from tkinter import messagebox
 from PIL import Image
 import os
 import psutil
+
 NoneType = type(None)
 import sys
-#if not globalsz.args['nocuda']:
+# if not globalsz.args['nocuda']:
 #    torch.backends.cudnn.benchmark = True
 import tqdm
 
@@ -58,95 +68,113 @@ if not globalsz.args['fastload']:
     import torch
 if not globalsz.lowmem:
     import tensorflow as tf
+
     physical_devices = tf.config.list_physical_devices('GPU')
     for i in physical_devices:
         tf.config.experimental.set_memory_growth(i, True)
-        
+
         tf.config.experimental.set_virtual_device_configuration(
-                i,[tf.config.experimental.VirtualDeviceConfiguration(memory_limit=4096)])
+            i, [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=4096)])
 if globalsz.args['experimental']:
     try:
         from imutils.video import FileVideoStream
     except ImportError:
         print("In the experimental mode, you have to pip install imutils")
         exit()
-        
+
+
 def restart_program():
     """Restarts the current program."""
     python = sys.executable
     os.execl(python, python, *sys.argv)
+
+
 def is_video_file(filename):
     video_extensions = ['.mp4', '.avi', '.mkv', '.mov', '.webm']  # Add more extensions as needed
     _, ext = os.path.splitext(filename)
     return ext.lower() in video_extensions
+
+
 def is_picture_file(filename):
     image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.svg', '.tiff', '.webp']
     _, ext = os.path.splitext(filename)
     return ext.lower() in image_extensions
+
+
 def get_system_usage():
     # Get RAM usage in GB
-    ram_usage = round(psutil.virtual_memory().used / 1024**3, 1)
+    ram_usage = round(psutil.virtual_memory().used / 1024 ** 3, 1)
 
     # Get total RAM in GB
-    total_ram = round(psutil.virtual_memory().total / 1024**3, 1)
+    total_ram = round(psutil.virtual_memory().total / 1024 ** 3, 1)
 
     # Get CPU usage in percentage
     cpu_usage = round(psutil.cpu_percent(), 0)
     return ram_usage, total_ram, cpu_usage
+
+
 def extract_frames_from_video(target_video, output_folder):
-    target_video_name =  os.path.basename(target_video)
+    target_video_name = os.path.basename(target_video)
     ffmpeg_cmd = [
         'ffmpeg',
         '-i', target_video,
         f'{output_folder}/{target_video_name}/frame_%05d.png'
     ]
     subprocess.run(ffmpeg_cmd, check=True)
+
+
 def add_audio_from_video(video_path, audio_video_path, output_path):
     ffmpeg_cmd = [
         'ffmpeg',
         "-an",
         '-i', video_path,
         '-i', audio_video_path,
-        #'-c:v', 'copy',    # Copy video codec settings
-        #'-c', 'copy',    # Copy audio codec settings
+        # '-c:v', 'copy',    # Copy video codec settings
+        # '-c', 'copy',    # Copy audio codec settings
         '-map', '1:a:0?',
         '-map', '0:v:0',
-        #'-acodec', 'copy',
-        #'-shortest',
+        # '-acodec', 'copy',
+        # '-shortest',
         output_path
     ]
     subprocess.run(ffmpeg_cmd, check=True)
+
+
 def merge_face(temp_frame, original, alpha):
     temp_frame = Image.blend(Image.fromarray(original), Image.fromarray(temp_frame), alpha)
     return np.asarray(temp_frame)
+
+
 class GFPGAN_onnxruntime:
-    def __init__(self, model_path, use_gpu = False):
+    def __init__(self, model_path, use_gpu=False):
         sess_options = rt.SessionOptions()
         sess_options.intra_op_num_threads = 8
         providers = rt.get_available_providers()
         self.ort_session = rt.InferenceSession(model_path, providers=providers, session_options=sess_options)
         self.net_input_name = self.ort_session.get_inputs()[0].name
-        _,self.net_input_channels,self.net_input_height,self.net_input_width = self.ort_session.get_inputs()[0].shape
+        _, self.net_input_channels, self.net_input_height, self.net_input_width = self.ort_session.get_inputs()[0].shape
         self.net_output_count = len(self.ort_session.get_outputs())
-        self.face_size = 512 #512
+        self.face_size = 512  # 512
         self.face_template = np.array([[192, 240], [319, 240], [257, 371]]) * (self.face_size / 512.0)
         self.upscale_factor = 1
         self.affine = False
         self.affine_matrix = None
+
     def pre_process(self, img):
-        #img = cv2.resize(img, (self.face_size//2, self.face_size//2))
+        # img = cv2.resize(img, (self.face_size//2, self.face_size//2))
         img = cv2.resize(img, (self.face_size, self.face_size))
         img = img / 255.0
         img = img.astype('float32')
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img[:,:,0] = (img[:,:,0]-0.5)/0.5
-        img[:,:,1] = (img[:,:,1]-0.5)/0.5
-        img[:,:,2] = (img[:,:,2]-0.5)/0.5
-        img = np.float32(img[np.newaxis,:,:,:])
+        img[:, :, 0] = (img[:, :, 0] - 0.5) / 0.5
+        img[:, :, 1] = (img[:, :, 1] - 0.5) / 0.5
+        img[:, :, 2] = (img[:, :, 2] - 0.5) / 0.5
+        img = np.float32(img[np.newaxis, :, :, :])
         img = img.transpose(0, 3, 1, 2)
         return img
+
     def post_process(self, output, height, width):
-        output = output.clip(-1,1)
+        output = output.clip(-1, 1)
         output = (output + 1) / 2
         output = output.transpose(1, 2, 0)
         output = cv2.cvtColor(output, cv2.COLOR_RGB2BGR)
@@ -167,7 +195,7 @@ class GFPGAN_onnxruntime:
             pasted_face = inv_mask_erosion[:, :, None] * inv_restored
             total_face_area = np.sum(inv_mask_erosion)
             # compute the fusion edge based on the area of face
-            w_edge = int(total_face_area**0.5) // 20
+            w_edge = int(total_face_area ** 0.5) // 20
             erosion_radius = w_edge * 2
             inv_mask_center = cv2.erode(inv_mask_erosion, np.ones((erosion_radius, erosion_radius), np.uint8))
             blur_size = w_edge * 2
@@ -188,7 +216,8 @@ class GFPGAN_onnxruntime:
         output, inv_soft_mask = self.post_process(output, height, width)
         output = output.astype(np.uint8)
         return output, inv_soft_mask
-    
+
+
 def add_audio_from_video(video_path, audio_video_path, output_path):
     ffmpeg_cmd = [
         'ffmpeg',
@@ -201,24 +230,31 @@ def add_audio_from_video(video_path, audio_video_path, output_path):
         output_path
     ]
     subprocess.run(ffmpeg_cmd, check=True)
+
+
 def get_nth_frame(cap, number):
     cap.set(cv2.CAP_PROP_POS_FRAMES, number)
     ret, frame = cap.read()
     if ret:
         return frame
     return None
+
+
 class ThreadWithReturnValue(Thread):
     def __init__(self, group=None, target=None, name=None,
-                args=(), kwargs={}, Verbose=None):
+                 args=(), kwargs={}, Verbose=None):
         Thread.__init__(self, group, target, name, args, kwargs)
         self._return = None
+
     def run(self):
         if self._target is not None:
             self._return = self._target(*self._args, **self._kwargs)
+
     def join(self, *args):
         Thread.join(self, *args)
         return self._return
-    
+
+
 class VideoCaptureThread:
     def __init__(self, video_path, buffer_size):
         import queue
@@ -239,6 +275,7 @@ class VideoCaptureThread:
         self.height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         cap.release()
         self.start()
+
     def start(self):
         self.thread = threading.Thread(target=self._capture_frames)
         self.thread.start()
@@ -292,38 +329,48 @@ def prepare_models(args):
     sess_options = rt.SessionOptions()
     sess_options.intra_op_num_threads = 8
     sess_options2 = rt.SessionOptions()
-    sess_options2.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL #Varying with all the options
-    sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL #Varying with all the options
+    sess_options2.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL  # Varying with all the options
+    sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL  # Varying with all the options
     if not args['no_faceswap']:
-        face_swapper = insightface.model_zoo.get_model("inswapper_128.onnx", session_options=sess_options, providers=providers)
+        face_swapper = insightface.model_zoo.get_model("inswapper_128.onnx", session_options=sess_options,
+                                                       providers=providers)
     else:
         face_swapper = None
     if args['lowmem']:
-        face_analyser = insightface.app.FaceAnalysis(name='buffalo_l', providers=providers, session_options=sess_options2)
+        face_analyser = insightface.app.FaceAnalysis(name='buffalo_l', providers=providers,
+                                                     session_options=sess_options2)
         face_analyser.prepare(ctx_id=0, det_size=(256, 256))
     else:
         face_analyser = insightface.app.FaceAnalysis(name='buffalo_l', providers=providers)
         face_analyser.prepare(ctx_id=0, det_size=(640, 640))
-    #face_analyser.models.pop("landmark_3d_68")
-    #face_analyser.models.pop("landmark_2d_106")
-    #face_analyser.models.pop("genderage")
+    # face_analyser.models.pop("landmark_3d_68")
+    # face_analyser.models.pop("landmark_2d_106")
+    # face_analyser.models.pop("genderage")
     return face_swapper, face_analyser
 
-def upscale_image(image, generator ):
+
+def upscale_image(image, generator):
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     image = cv2.resize(image, (256, 256))
-    image = (image / 255.0) #- 1
+    image = (image / 255.0)  # - 1
     image = np.expand_dims(image, axis=0).astype(np.float32)
-    #output = generator.run(None, {'input': image})
-    output = generator(image)#.predict(image, verbose=0)
-    return cv2.cvtColor((np.squeeze(output, axis=0) * 255.0), cv2.COLOR_BGR2RGB)  #np.squeeze(output, axis=0)*255
+    # output = generator.run(None, {'input': image})
+    output = generator(image)  # .predict(image, verbose=0)
+    return cv2.cvtColor((np.squeeze(output, axis=0) * 255.0), cv2.COLOR_BGR2RGB)  # np.squeeze(output, axis=0)*255
+
+
 def show_error():
     messagebox.showerror("Error", "Preview mode does not work with camera, so please use normal mode")
+
+
 def show_warning():
     messagebox.showwarning("Warning", "Camera is not properly working with experimental mode, sorry")
 
+
 def show_error_custom(text=''):
     messagebox.showerror("Error", text)
+
+
 def compute_cosine_distance(emb1, emb2, allowed_distance):
     global distance
     if globalsz.args['fastload']:
@@ -334,13 +381,16 @@ def compute_cosine_distance(emb1, emb2, allowed_distance):
         check = True
     return d, check
 
+
 def load_generator():
     if isinstance(globalsz.generator, NoneType):
-        #model_path = 'generator.onnx'
-        #providers = rt.get_available_providers()
-        #generator = rt.InferenceSession(model_path, providers=providers)
-        globalsz.generator = tf.keras.models.load_model('complex_256_v7_stage3_12999.h5')#, custom_objects={'Mish': Mish})
+        # model_path = 'generator.onnx'
+        # providers = rt.get_available_providers()
+        # generator = rt.InferenceSession(model_path, providers=providers)
+        globalsz.generator = tf.keras.models.load_model(
+            'complex_256_v7_stage3_12999.h5')  # , custom_objects={'Mish': Mish})
     return globalsz.generator
+
 
 def load_read_esrgan():
     global RRDBNet, load_file_from_url, RealESRGANer, SRVGGNetCompact
@@ -365,7 +415,8 @@ def load_read_esrgan():
         elif model_name == 'RealESRGAN_x4plus_anime_6B':  # x4 RRDBNet model with 6 blocks
             model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=6, num_grow_ch=32, scale=4)
             netscale = 4
-            file_url = ['https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth']
+            file_url = [
+                'https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth']
         elif model_name == 'RealESRGAN_x2plus':  # x2 RRDBNet model
             model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=2)
             netscale = 2
@@ -389,7 +440,7 @@ def load_read_esrgan():
                 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
                 for url in file_url:
                     model_path = load_file_from_url(url=url, model_dir=os.path.join(ROOT_DIR, 'weights'), progress=True)
-        
+
         TILE = 0
         TILE_PAD = 10
         PRE_PAD = 0
@@ -399,7 +450,7 @@ def load_read_esrgan():
         elif globalsz.args['nocuda']:
             dev = torch.device('cpu')
         else:
-            dev=torch.device(f"cuda:{globalsz.select_realesrgan_gpu}")
+            dev = torch.device(f"cuda:{globalsz.select_realesrgan_gpu}")
 
         globalsz.realeasrgan_enhancer = RealESRGANer(
             scale=netscale,
@@ -408,26 +459,31 @@ def load_read_esrgan():
             tile=TILE,
             tile_pad=TILE_PAD,
             pre_pad=PRE_PAD,
-            half= globalsz.realesrgan_fp16,
-            device = dev
+            half=globalsz.realesrgan_fp16,
+            device=dev
         )
 
     return globalsz.realeasrgan_enhancer
+
 
 def realesrgan_enhance(image):
     with globalsz.realesrgan_lock:
         output, _ = load_read_esrgan().enhance(image, outscale=globalsz.realesrgan_outscale)
     return output
+
+
 arch = 'clean'
 channel_multiplier = 2
 model_path = 'GFPGANv1.4.pth'
+
+
 def load_restorer():
     global GFPGANer
     if isinstance(globalsz.restorer, NoneType):
-        
+
         if globalsz.args['fastload']:
             from gfpgan import GFPGANer
-            
+
         if globalsz.args['apple']:
             dev = torch.device('mps')
         elif globalsz.args['nocuda']:
@@ -440,9 +496,10 @@ def load_restorer():
             arch=arch,
             channel_multiplier=channel_multiplier,
             bg_upsampler=None,
-            device = dev
+            device=dev
         )
     return globalsz.restorer
+
 
 def count_frames(video_path):
     video = cv2.VideoCapture(video_path)
@@ -450,10 +507,12 @@ def count_frames(video_path):
     video.release()
     return total_frames
 
+
 def load_gfpganonnx():
     if isinstance(globalsz.gfpgan_onnx_model, NoneType):
         globalsz.gfpgan_onnx_model = GFPGAN_onnxruntime(model_path="GFPGANv1.4.onnx")
     return globalsz.gfpgan_onnx_model
+
 
 def restorer_enhance(facer):
     with globalsz.THREAD_SEMAPHORE:
@@ -464,46 +523,30 @@ def restorer_enhance(facer):
             paste_back=True
         )
     return facex
-def create_cap():
-    global width, height
-    if not globalsz.args['experimental']:
-        if globalsz.args['camera_fix'] == True:
-            cap = cv2.VideoCapture(globalsz.args['target_path'], cv2.CAP_DSHOW)
-        else:
-            cap = cv2.VideoCapture(globalsz.args['target_path'])
-        if isinstance(globalsz.args['target_path'], int):
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, globalsz.width)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, globalsz.height)
-        fourcc = cv2.VideoWriter_fourcc(*'H265')
-        cap.set(cv2.CAP_PROP_FOURCC, fourcc)
-        # Get the video's properties
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    else:
-        '''cap = VideoCaptureThread(args['target_path'], 30)
-        if isinstance(args['target_path'], int):
-            show_warning()
-        fps = cap.fps
-        width = int(cap.width)
-        height = int(cap.height)'''
-        cap = cv2.VideoCapture(globalsz.args['target_path'])
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        cap.release()
-        del cap
-        cap = FileVideoStream(globalsz.args['target_path']).start()
-        time.sleep(1.0)
+
+
+def create_cap(width, height, target_path, output):
+    cap = cv2.VideoCapture(target_path)
+    if isinstance(target_path, int):
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+    fourcc = cv2.VideoWriter_fourcc(*'H265')
+    cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+    # Get the video's properties
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
     # Create a VideoWriter object to save the processed video
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    name = globalsz.args['output']
-    if isinstance(globalsz.args['target_path'], str):
-        name = f"{globalsz.args['output']}_temp.mp4"
+    name = output
+    if isinstance(target_path, str):
+        name = f"{output}_temp.mp4"
     out = cv2.VideoWriter(name, fourcc, fps, (width, height))
     out.set(cv2.VIDEOWRITER_PROP_QUALITY, 100)
     frame_number = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    return [cap, fps, width, height, out, name, globalsz.args['target_path'], frame_number]
+    return [cap, fps, width, height, out, name, target_path, frame_number]
+
 
 def create_batch_cap(file):
     if not globalsz.args['experimental']:
@@ -529,15 +572,17 @@ def create_batch_cap(file):
         cap.release()
         del cap
         # yes, might overflow is too many files, well, it's experimental lol, what do you expect?
-        cap = FileVideoStream(os.path.join(globalsz.args['target_path'], file)).start() 
+        cap = FileVideoStream(os.path.join(globalsz.args['target_path'], file)).start()
         time.sleep(1.0)
 
     # Create a VideoWriter object to save the processed video
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    name = os.path.join(globalsz.args['output'], f"{file}{globalsz.args['batch']}_temp.mp4")#f"{args['output']}_temp{args['batch']}.mp4"
+    name = os.path.join(globalsz.args['output'],
+                        f"{file}{globalsz.args['batch']}_temp.mp4")  # f"{args['output']}_temp{args['batch']}.mp4"
     out = cv2.VideoWriter(name, fourcc, fps, (width, height))
     frame_number = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     return [cap, fps, width, height, out, name, file, frame_number]
+
 
 def get_gpu_amount():
     num_devices = -1
@@ -545,41 +590,43 @@ def get_gpu_amount():
         num_devices = torch.cuda.device_count()
     return num_devices
 
+
 def create_configs_for_onnx():
     listx = []
     gpu_amount = get_gpu_amount()
     if gpu_amount == -1 and not globalsz.args['apple']:
-        return [('CPUExecutionProvider',),]
+        return [('CPUExecutionProvider',), ]
     elif globalsz.args['apple']:
-        return [('CoreMLExecutionProvider',),]
+        return [('CoreMLExecutionProvider',), ]
     gpu_list = list(range(gpu_amount))
     if not globalsz.select_face_swapper_gpu == None:
         gpu_list = globalsz.select_face_swapper_gpu
     for idx in gpu_list:
         providers = [('CUDAExecutionProvider', {
             'device_id': idx,
-        'gpu_mem_limit': 12 * 1024 * 1024 * 1024,
-        'gpu_external_alloc': 0,
-        'gpu_external_free': 0,
-        'gpu_external_empty_cache': 1,
-        'cudnn_conv_algo_search': 'EXHAUSTIVE',
-        'cudnn_conv1d_pad_to_nc1d': 1,
-        'arena_extend_strategy': 'kNextPowerOfTwo',
-        'do_copy_in_default_stream': 1,
-        'enable_cuda_graph': 0,
-        'cudnn_conv_use_max_workspace': 1,
-        'tunable_op_enable': 1,
-        'enable_skip_layer_norm_strict_mode': 1,
-        'tunable_op_tuning_enable': 1
-        }),'CPUExecutionProvider'
-        ]
+            'gpu_mem_limit': 12 * 1024 * 1024 * 1024,
+            'gpu_external_alloc': 0,
+            'gpu_external_free': 0,
+            'gpu_external_empty_cache': 1,
+            'cudnn_conv_algo_search': 'EXHAUSTIVE',
+            'cudnn_conv1d_pad_to_nc1d': 1,
+            'arena_extend_strategy': 'kNextPowerOfTwo',
+            'do_copy_in_default_stream': 1,
+            'enable_cuda_graph': 0,
+            'cudnn_conv_use_max_workspace': 1,
+            'tunable_op_enable': 1,
+            'enable_skip_layer_norm_strict_mode': 1,
+            'tunable_op_tuning_enable': 1
+        }), 'CPUExecutionProvider'
+                     ]
         listx.append(providers)
     return listx
+
 
 def get_sess_options():
     sess_options = rt.SessionOptions()
     sess_options.intra_op_num_threads = 1
-    sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL#rt.GraphOptimizationLevel.ORT_DISABLE_ALL
+    sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL  # rt.GraphOptimizationLevel.ORT_DISABLE_ALL
     sess_options.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
     sess_options.execution_order = rt.ExecutionOrder.PRIORITY_BASED
     return sess_options
@@ -594,32 +641,36 @@ def prepare_swappers_and_analysers(args):
     for idx, providers in enumerate(provider_list):
         if not args['no_faceswap']:
             if args['optimization'] == "fp16":
-                
+
                 if globalsz.args['fastload']:
                     from swapperfp16 import get_model
                 swappers.append(get_model("inswapper_128.fp16.onnx", session_options=sess_options, providers=providers))
             elif args['optimization'] == "int8":
                 if "CUDAExecutionProvider" in provider_list:
                     print("int8 may not work on gpu properly and might load your cpu instead")
-                    
+
                 if globalsz.args['fastload']:
                     from swapperfp16 import get_model
-                swappers.append(get_model("inswapper_128.quant.onnx", session_options=sess_options, providers=providers))
+                swappers.append(
+                    get_model("inswapper_128.quant.onnx", session_options=sess_options, providers=providers))
             else:
-                swappers.append(insightface.model_zoo.get_model("inswapper_128.onnx", session_options=sess_options, providers=providers))
+                swappers.append(insightface.model_zoo.get_model("inswapper_128.onnx", session_options=sess_options,
+                                                                providers=providers))
         else:
             swappers.append(None)
 
-        analysers.append(insightface.app.FaceAnalysis(name='buffalo_l',allowed_modules=["recognition", "detection"], providers=providers, session_options=sess_options))
-        analysers[idx].prepare(ctx_id=0, det_size=(256, 256)) #640, 640
+        analysers.append(insightface.app.FaceAnalysis(name='buffalo_l', allowed_modules=["recognition", "detection"],
+                                                      providers=providers, session_options=sess_options))
+        analysers[idx].prepare(ctx_id=0, det_size=(256, 256))  # 640, 640
     return swappers, analysers
+
 
 def download(link, filename):
     if globalsz.args['fastload']:
         import requests
     response = requests.get(link, stream=True)
     total_size = int(response.headers.get('content-length', 0))
-    block_size = 1024*16  # 1 KB
+    block_size = 1024 * 16  # 1 KB
     progress_bar = tqdm.tqdm(total=total_size, unit='B', unit_scale=True)
 
     with open(filename, 'wb') as file:
@@ -629,8 +680,8 @@ def download(link, filename):
 
     progress_bar.close()
 
+
 def check_or_download(filename):
     exists = os.path.exists(filename)
     if not exists:
         download(f"https://github.com/RichardErkhov/FastFaceSwap/releases/download/model/{filename}", filename)
-
