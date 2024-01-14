@@ -1,11 +1,12 @@
 import os
+import traceback
+import asyncio
 
 os.environ['worker'] = '1'
 
 from bot import bot
 from db import StickerPack
 from utils import upload_file, process_sticker
-import asyncio
 
 from swapper.swap import fully_process_video
 
@@ -36,7 +37,10 @@ async def process_a_random_pack():
 async def main():
     await bot.connect()
     while True:
-        await process_a_random_pack()
+        try:
+            await process_a_random_pack()
+        except Exception:
+            print(traceback.format_exc())
         await asyncio.sleep(1)
 
 
