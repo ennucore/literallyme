@@ -3,7 +3,7 @@ import asyncio
 import telethon.types
 from telethon import events, TelegramClient
 
-from literallyme.pack_creation import create_sticker_pack, documents_from_directory
+from pack_creation import create_sticker_pack, documents_from_directory
 from utils import upload_file
 import db
 from charts import get_charts

@@ -1055,27 +1055,6 @@ protobuf = "*"
 sympy = "*"
 
 [[package]]
-name = "onnxruntime-silicon"
-version = "1.16.0"
-description = "ONNX Runtime is a runtime accelerator for Machine Learning models"
-optional = false
-python-versions = "*"
-files = [
-    {file = "onnxruntime_silicon-1.16.0-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:7e52851f453f77ca8c965081fab2199e1c0eca2cb00fd03883c9a6731d6e534a"},
-    {file = "onnxruntime_silicon-1.16.0-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:f73e5cea0c2bd9c847053c26fb9cb30afc401f4908baa351bf34af3c261e777c"},
-    {file = "onnxruntime_silicon-1.16.0-cp38-cp38-macosx_13_0_arm64.whl", hash = "sha256:8b80f26cf102c38d73d55fffd65f8938960301dc4e0763660877ce5bd9989a36"},
-    {file = "onnxruntime_silicon-1.16.0-cp39-cp39-macosx_13_0_arm64.whl", hash = "sha256:708bf16ff43462469af2773bfe245b2d5b885e3240c480b6bdea750da7cf70e3"},
-]
-
-[package.dependencies]
-coloredlogs = "*"
-flatbuffers = "*"
-numpy = ">=1.22.3"
-packaging = "*"
-protobuf = "*"
-sympy = "*"
-
-[[package]]
 name = "opencv-python-headless"
 version = "4.9.0.80"
 description = "Wrapper package for OpenCV python bindings."
@@ -2207,5 +2186,5 @@ files = [
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.11"
-content-hash = "8484677bbfd047d5a3b1139c824338da70a11586b345bdc951f248839e7b5da2"
+python-versions = "^3.11, ^3.10"
+content-hash = "c850536ce563b78e80ad2c971318b095c82fac82c3dc09eddfd64bbd893b20f3"

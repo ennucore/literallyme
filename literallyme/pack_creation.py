@@ -2,7 +2,7 @@ import os
 
 from telethon import types, functions
 
-from literallyme.utils import process_sticker, gen_pack_id, upload_file
+from utils import process_sticker, gen_pack_id, upload_file
 
 
 async def documents_from_directory(bot, directory: str) -> list[(int, int, bytes)]:
