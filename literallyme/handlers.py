@@ -1,12 +1,11 @@
 import asyncio
 
-import telethon.types
 from telethon import events, TelegramClient
 
 from pack_creation import create_sticker_pack, documents_from_directory
-from utils import upload_file
 import db
 from charts import get_charts
+import time
 
 
 async def get_videos(bot, pack) -> list[(id, id, bytes)]:
@@ -33,8 +32,26 @@ async def wait_for_video_generation(pack: db.StickerPack) -> db.StickerPack:
 async def create_pack(bot, pack: db.StickerPack):
     tg_pack = await create_sticker_pack(bot, pack.user_id, pack.documents, name_suffix=pack.pack_id)
     pack.status = 'created'
+    pack.stages_timestamps['created'] = int(time.time())
     pack.save_to_mongo()
     return tg_pack
+
+
+async def finish_pack(bot, user, pack: db.StickerPack):
+    first_sticker = (await create_pack(bot, pack)).documents[0]
+
+    await bot.send_message(user.user_id, ['This is literally you:', 'Это буквально ты:'][user.lang == 'ru'])
+    await bot.send_file(user.user_id, first_sticker)
+
+
+async def finish_packs(bot: TelegramClient):
+    while True:
+        pack = db.StickerPack.random_generated_pack()
+        if pack is None:
+            await asyncio.sleep(1)
+            continue
+        user = db.User.from_mongo(pack.user_id)
+        await finish_pack(bot, user, pack)
 
 
 def apply_handlers(bot: TelegramClient):
@@ -62,11 +79,11 @@ def apply_handlers(bot: TelegramClient):
             'Пока ждешь, подпишись на @levchizhov, чтобы почитать стены текста от создателя этого бота'
         ][user.lang == 'ru'])
 
-        pack = await wait_for_video_generation(pack)
-        first_sticker = (await create_pack(bot, pack)).documents[0]
-
-        await bot.send_message(event.sender_id, ['This is literally you:', 'Это буквально ты:'][user.lang == 'ru'])
-        await bot.send_file(event.sender_id, first_sticker)
+        # pack = await wait_for_video_generation(pack)
+        # first_sticker = (await create_pack(bot, pack)).documents[0]
+        #
+        # await bot.send_message(event.sender_id, ['This is literally you:', 'Это буквально ты:'][user.lang == 'ru'])
+        # await bot.send_file(event.sender_id, first_sticker)
 
     @bot.on(events.NewMessage(pattern='/fancy_charts', func=lambda e: e.sender.username in ('ennucore', 'mb_ass')))
     async def send_stats(event):

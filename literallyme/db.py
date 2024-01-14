@@ -63,6 +63,7 @@ class StickerPack:
     # a list of (id, access_hash, file_reference) tuples
     documents: list[(int, int, bytes)] = field(default_factory=list)
     emojis: list[str] = field(default_factory=list)
+    stages_timestamps: dict[str, int] = field(default_factory=dict)
     _id: Any = None
 
     def save_to_mongo(self):
@@ -81,21 +82,34 @@ class StickerPack:
         return cls(**pack)
 
     def processing(self):
-        self.status = 'processing'
+        self.set_status('processing')
+
+    def set_status(self, status: str):
+        self.status = status
+        self.stages_timestamps[status] = int(time.time())
         self.save_to_mongo()
 
     def add_docs(self, docs: list[(int, int, bytes)]):
         self.documents.extend(docs)
         self.status = 'generated'
+        self.stages_timestamps['generated'] = int(time.time())
         self.save_to_mongo()
 
     @classmethod
-    def random_queued_pack(cls) -> StickerPack | None:
+    def random_pack(cls, query: dict) -> StickerPack | None:
         pack = mongo.sticker_packs.aggregate([
-            {'$match': {'status': 'queued'}},
+            {'$match': query},
             {'$sample': {'size': 1}}
         ])
         pack = list(pack)
         if len(pack) == 0:
             return None
         return cls(**pack[0])
+
+    @classmethod
+    def random_queued_pack(cls) -> StickerPack | None:
+        return cls.random_pack({'status': 'queued'})
+
+    @classmethod
+    def random_generated_pack(cls) -> StickerPack | None:
+        return cls.random_pack({'status': 'generated'})
