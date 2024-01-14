@@ -17,6 +17,7 @@ def process_sticker(filename: str) -> str:
         '-y',  # Overwrite output file if it exists
         '-an',  # Remove audio
         '-t', '3',  # Set duration to 3 seconds
+        '-b:v', '0.3M',
         '-c:v', 'libvpx-vp9',  # Video codec
         new_filename  # Output file
     ]
