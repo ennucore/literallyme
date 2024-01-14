@@ -9,7 +9,9 @@ import asyncio
 
 from swapper.swap import fully_process_video
 
-sticker_paths = ['stickers/0/homelander.webm', 'stickers/0/popcorn.webm']
+sticker_paths = ['stickers/0/homelander.webm', 'stickers/0/popcorn.webm', 'stickers/0/5278314910416117820.webm',
+                 'stickers/0/5278314910416117820.webm', 'stickers/0/5278314910416117820.webm',
+                 'stickers/0/5278314910416117820.webm']
 
 
 async def get_videos(bot, pack: StickerPack) -> list[(int, int, bytes)]:
