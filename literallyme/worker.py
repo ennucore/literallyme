@@ -7,6 +7,7 @@ os.environ['worker'] = '1'
 from bot import bot
 from db import StickerPack
 from utils import upload_file, process_sticker
+from concurrent.futures import ThreadPoolExecutor
 
 from swapper.swap import fully_process_video
 
@@ -19,8 +20,23 @@ async def get_videos(bot, pack: StickerPack) -> list[(int, int, bytes)]:
     with open(pack.pack_id + '.png', 'wb') as f:
         f.write(pack.input_photo)
     docs = list()
-    for sticker in sticker_paths:
-        docs.append(await upload_file(bot, process_sticker(fully_process_video(pack.pack_id + '.png', sticker))))
+    # for sticker in sticker_paths:
+    #     file_path = process_sticker(fully_process_video(pack.pack_id + '.png', sticker))
+    #     docs.append(await upload_file(bot, file_path))
+    with ThreadPoolExecutor() as pool:
+        loop = asyncio.get_event_loop()
+        futures = [
+            loop.run_in_executor(
+                pool,
+                fully_process_video,
+                pack.pack_id + '.png',
+                sticker
+            )
+            for sticker in sticker_paths
+        ]
+        for result in await asyncio.gather(*futures):
+            file_path = process_sticker(result)
+            docs.append(await upload_file(bot, file_path))
     return docs
 
 
