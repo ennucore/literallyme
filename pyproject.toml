@@ -6,7 +6,7 @@ authors = ["Your Name <you@example.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11, ^3.10"
 telethon = "^1.33.1"
 replicate = "^0.22.0"
 python-dotenv = "^1.0.0"
