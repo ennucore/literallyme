@@ -12,8 +12,9 @@ from concurrent.futures import ProcessPoolExecutor
 from swapper.swap import fully_process_video
 
 sticker_paths = ['stickers/0/homelander.webm', 'stickers/0/popcorn.webm', 'stickers/0/5278314910416117820.webm',
-                 'stickers/0/5278314910416117820.webm', 'stickers/0/5278314910416117820.webm',
-                 'stickers/0/5278314910416117820.webm']
+                 'stickers/0/016_kissing_face_with_closed_eyes.webm', 'stickers/0/5460885659407357966.webm',
+                 'stickers/0/008_thumbs_up.webm', 'stickers/0/007_face_with_symbols_on_mouth.webm',
+                 'stickers/0/003_slightly_smiling_face.webm']
 
 
 async def get_videos(bot, pack: StickerPack) -> list[(int, int, bytes)]:
