@@ -83,3 +83,14 @@ class StickerPack:
         self.documents.extend(docs)
         self.status = 'generated'
         self.save_to_mongo()
+
+    @classmethod
+    def random_queued_pack(cls) -> StickerPack | None:
+        pack = mongo.sticker_packs.aggregate([
+            {'$match': {'status': 'queued'}},
+            {'$sample': {'size': 1}}
+        ])
+        pack = list(pack)
+        if len(pack) == 0:
+            return None
+        return cls(**pack[0])
