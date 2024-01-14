@@ -312,7 +312,4 @@ class ImageProcessor:
 
 
 
-
-    def prepare_image_list(self):
-
 main()
