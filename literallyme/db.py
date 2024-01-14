@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
+from typing import Any
 import time
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -48,6 +49,7 @@ class User:
         pack = StickerPack(pack_id=pack_id, user_id=self.user_id, input_photo=photo)
         pack.save_to_mongo()
         self.save_to_mongo()
+        print(pack)
         return pack
 
 
@@ -61,12 +63,15 @@ class StickerPack:
     # a list of (id, access_hash, file_reference) tuples
     documents: list[(int, int, bytes)] = field(default_factory=list)
     emojis: list[str] = field(default_factory=list)
+    _id: Any = None
 
     def save_to_mongo(self):
         mongo.sticker_packs.update_one({'pack_id': self.pack_id}, {'$set': self.dict()}, upsert=True)
 
     def dict(self) -> dict:
-        return asdict(self)
+        d = asdict(self)
+        d.pop('_id')
+        return d
 
     @classmethod
     def from_mongo(cls, pack_id: str) -> StickerPack | None:

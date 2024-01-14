@@ -177,4 +177,4 @@ def fully_process_video(input_path: str, target_path: str):
     frame_paths = get_temp_frame_paths(target_path)
     print(f'Extracted {len(frame_paths)} frames, first one is {frame_paths[0]}')
     process_video(input_path, frame_paths, process_frames)
-    print(create_video(target_path))
+    return create_video(target_path)[1]

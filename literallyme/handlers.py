@@ -1,3 +1,5 @@
+import asyncio
+
 import telethon.types
 from telethon import events, TelegramClient
 
@@ -18,6 +20,13 @@ async def generate_videos(bot, pack: db.StickerPack) -> db.StickerPack:
     pack.processing()
     docs = await get_videos(bot, pack)
     pack.add_docs(docs)
+    return pack
+
+
+async def wait_for_video_generation(pack: db.StickerPack) -> db.StickerPack:
+    while pack.status != 'generated':
+        pack = db.StickerPack.from_mongo(pack.pack_id)
+        await asyncio.sleep(2)
     return pack
 
 
@@ -46,7 +55,7 @@ def apply_handlers(bot: TelegramClient):
             photo = file.read()
             pack = user.new_pack(photo)
 
-        pack = await generate_videos(bot, pack)
+        pack = await wait_for_video_generation(pack)
         first_sticker = (await create_pack(bot, pack)).documents[0]
 
         await bot.send_message(event.sender_id, 'This is literally you:')
