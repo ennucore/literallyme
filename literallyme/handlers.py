@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 
 from telethon import events, TelegramClient
 
@@ -38,7 +39,12 @@ async def create_pack(bot, pack: db.StickerPack):
 
 
 async def finish_pack(bot, user, pack: db.StickerPack):
-    first_sticker = (await create_pack(bot, pack)).documents[0]
+    try:
+        first_sticker = (await create_pack(bot, pack)).documents[0]
+    except Exception:
+        print(traceback.format_exc())
+        pack.set_status('failed')
+        return
 
     await bot.send_message(user.user_id, ['This is literally you:', 'Это буквально ты:'][user.lang == 'ru'])
     await bot.send_file(user.user_id, first_sticker)
