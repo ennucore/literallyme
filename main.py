@@ -311,5 +311,3 @@ class ImageProcessor:
         process_videos(caps, frame_index, frame_move, old_index)
 
 
-
-main()
