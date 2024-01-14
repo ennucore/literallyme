@@ -13,7 +13,8 @@ def process_sticker(filename: str) -> str:
     command = [
         'ffmpeg',
         '-i', filename,  # Input file
-        '-vf', 'scale=\'min(512\\, iw):-1\'',  # Downscale to fit into 512x512, maintaining aspect ratio
+        '-vf', "scale='min(512,iw):-1',colorkey=0x000000:0.1:0.1"
+        # '-vf', 'scale=\'min(512\\, iw):-1\'',  # Downscale to fit into 512x512, maintaining aspect ratio
         '-y',  # Overwrite output file if it exists
         '-an',  # Remove audio
         '-t', '3',  # Set duration to 3 seconds

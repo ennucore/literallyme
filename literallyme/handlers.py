@@ -42,7 +42,8 @@ def apply_handlers(bot: TelegramClient):
     async def start(event):
         """Send a welcome message when the user starts the bot"""
         lang = ['en', 'ru'][event.sender.lang_code == 'ru']
-        await event.respond('Hi! Send me a photo and I will create a sticker pack for you.')
+        await event.respond(['Hi! Send me a photo and I will create a sticker pack for you.',
+                             'Привет! Пришли мне фото и я создам для тебя стикерпак буквально с тобой.'][lang == 'ru'])
         db.User.from_mongo(event.sender_id, create_if_not_exists=True, lang=lang)
 
     @bot.on(events.NewMessage(func=lambda e: e.photo))
@@ -54,11 +55,17 @@ def apply_handlers(bot: TelegramClient):
         with open(photo_path, 'rb') as file:
             photo = file.read()
             pack = user.new_pack(photo)
+        await bot.send_message(event.sender_id, [
+            'Creating your pack, please, be patient, as this involves a lot of processing. '
+            'You can subscribe to @levchizhov while you wait to read walls of text from the creator of this bot',
+            'Создаю твой стикерпак. Это может занять некоторое время, потому что нейронки долго делают бжжж. '
+            'Пока ждешь, подпишись на @levchizhov, чтобы почитать стены текста от создателя этого бота'
+        ][user.lang == 'ru'])
 
         pack = await wait_for_video_generation(pack)
         first_sticker = (await create_pack(bot, pack)).documents[0]
 
-        await bot.send_message(event.sender_id, 'This is literally you:')
+        await bot.send_message(event.sender_id, ['This is literally you:', 'Это буквально ты:'][user.lang == 'ru'])
         await bot.send_file(event.sender_id, first_sticker)
 
     @bot.on(events.NewMessage(pattern='/fancy_charts', func=lambda e: e.sender.username in ('ennucore', 'mb_ass')))

@@ -19,11 +19,12 @@ FACE_ANALYSER = None
 THREAD_LOCK = threading.Lock()
 SIMILAR_FACE_DISTANCE = 0.85
 print(onnxruntime.get_available_providers())
+providers = ['CUDAExecutionProvider'] if 'CUDAExecutionProvider' in onnxruntime.get_available_providers() else None
 
 
 def suggest_execution_threads() -> int:
     if 'CUDAExecutionProvider' in onnxruntime.get_available_providers():
-        return 8
+        return 16
     return 8
 
 
@@ -86,7 +87,7 @@ def get_face_swapper() -> Any:
     with THREAD_LOCK:
         if FACE_SWAPPER is None:
             model_path = resolve_relative_path('../models/inswapper_128.onnx')
-            FACE_SWAPPER = insightface.model_zoo.get_model(model_path)
+            FACE_SWAPPER = insightface.model_zoo.get_model(model_path, providers=providers)
     return FACE_SWAPPER
 
 

@@ -35,6 +35,7 @@ async def main():
     await bot.connect()
     while True:
         await process_a_random_pack()
+        await asyncio.sleep(1)
 
 
 bot.loop.run_until_complete(main())
