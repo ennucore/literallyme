@@ -79,7 +79,7 @@ def apply_handlers(bot: TelegramClient):
             photo = file.read()
             pack = user.new_pack(photo)
         await bot.send_message(event.sender_id, [
-            'Creating your pack, please, be patient, as this can take a lot of time - you\'re in a queue. '
+            'Creating your pack, please, be patient, as this can take a lot of time - you\'re in a queue. ',
             # 'You can subscribe to @levchizhov while you wait to read walls of text from the creator of this bot',
             'Создаю твой стикерпак. Это может занять некоторое время, потому что нейронки долго делают бжжж. '
             # 'Пока ждешь, подпишись на @levchizhov, чтобы почитать стены текста от создателя этого бота'

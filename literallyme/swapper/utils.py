@@ -74,12 +74,12 @@ def get_temp_output_path(target_path: str) -> str:
     return os.path.join(temp_directory_path, TEMP_VIDEO_FILE)
 
 
-def create_video(target_path: str, fps: float = 20) -> (bool, str):
+def create_video(target_path: str, fps: float = 20, suffix: str = '') -> (bool, str):
     temp_output_path = get_temp_output_path(target_path)
     temp_directory_path = get_temp_directory_path(target_path)
     output_video_quality = (OUTPUT_VIDEO_QUALITY + 1) * 51 // 100
     commands = ['-hwaccel', 'auto', '-r', str(fps), '-i',
-                os.path.join(temp_directory_path, '%04d.sw.' + 'png'), '-c:v',
+                os.path.join(temp_directory_path, '%04d.sw' + suffix + '.png'), '-c:v',
                 output_video_encoder]
     if output_video_encoder in ['libx264', 'libx265', 'libvpx']:
         commands.extend(['-crf', str(output_video_quality)])
@@ -87,6 +87,11 @@ def create_video(target_path: str, fps: float = 20) -> (bool, str):
         commands.extend(['-cq', str(output_video_quality)])
     commands.extend(['-pix_fmt', 'yuv420p', '-vf', 'colorspace=bt709:iall=bt601-6-625:fast=1', '-y', temp_output_path])
     return run_ffmpeg(commands), temp_output_path
+
+
+def remove_frames(suffix: str) -> None:
+    for file_path in glob.glob(os.path.join(TEMP_DIRECTORY, '*.sw' + suffix + '.png')):
+        os.remove(file_path)
 
 
 def get_temp_frame_paths(target_path: str) -> List[str]:

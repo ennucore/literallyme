@@ -1,5 +1,5 @@
 import insightface
-from .utils import resolve_relative_path, conditional_download, extract_frames, get_temp_frame_paths, create_video
+from .utils import resolve_relative_path, conditional_download, extract_frames, get_temp_frame_paths, create_video, remove_frames
 import numpy
 from queue import Queue
 import threading
@@ -8,6 +8,7 @@ from insightface.app.common import Face
 from tqdm import tqdm
 import psutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import random
 import cv2
 import os
 import pickle
@@ -92,25 +93,26 @@ def get_face_swapper() -> Any:
 
 
 def multi_process_frame(source_path: str, temp_frame_paths: List[str],
-                        process_frames: Callable[[str, List[str], Any], None], update: Callable[[], None]) -> None:
+                        process_frames: Callable[[str, List[str], Any, str], None], update: Callable[[], None],
+                        suffix: str = '') -> None:
     with ThreadPoolExecutor(max_workers=EXECUTION_THREADS) as executor:
         futures = []
         queue = create_queue(temp_frame_paths)
         queue_per_future = max(len(temp_frame_paths) // EXECUTION_THREADS, 1)
         while not queue.empty():
-            future = executor.submit(process_frames, source_path, pick_queue(queue, queue_per_future), update)
+            future = executor.submit(process_frames, source_path, pick_queue(queue, queue_per_future), update, suffix)
             futures.append(future)
         for future in as_completed(futures):
             future.result()
 
 
 def process_video(source_path: str, frame_paths: list[str],
-                  process_frames: Callable[[str, List[str], Any], None]) -> None:
+                  process_frames: Callable[[str, List[str], Any, str], None], suffix: str = '') -> None:
     progress_bar_format = '{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]'
     total = len(frame_paths)
     with tqdm(total=total, desc='Processing', unit='frame', dynamic_ncols=True,
               bar_format=progress_bar_format) as progress:
-        multi_process_frame(source_path, frame_paths, process_frames, lambda: update_progress(progress))
+        multi_process_frame(source_path, frame_paths, process_frames, lambda: update_progress(progress), suffix)
 
 
 def swap_face(source_face: Face, target_face: Face, temp_frame: Frame) -> Frame:
@@ -134,14 +136,14 @@ def process_frame(source_face: Face, temp_frame: Frame, save_face: str = '') -> 
     return temp_frame
 
 
-def process_frames(source_path: str, temp_frame_paths: List[str], update: Callable[[], None]) -> None:
+def process_frames(source_path: str, temp_frame_paths: List[str], update: Callable[[], None], suffix: str = '') -> None:
     source_face = get_one_face(cv2.imread(source_path))
     for temp_frame_path in temp_frame_paths:
         if '.sw' in temp_frame_path:
             continue
         temp_frame = cv2.imread(temp_frame_path)
         result = process_frame(source_face, temp_frame, temp_frame_path.replace('.png', '.face'))
-        cv2.imwrite(temp_frame_path.replace('.png', '.sw.png'), result)
+        cv2.imwrite(temp_frame_path.replace('.png', '.sw' + suffix + '.png'), result)
         if update:
             update()
 
@@ -177,5 +179,8 @@ def fully_process_video(input_path: str, target_path: str):
     extract_frames(target_path)
     frame_paths = get_temp_frame_paths(target_path)
     print(f'Extracted {len(frame_paths)} frames, first one is {frame_paths[0]}')
-    process_video(input_path, frame_paths, process_frames)
-    return create_video(target_path)[1]
+    suffix = f'.{random.randint(0, 1000000)}'
+    process_video(input_path, frame_paths, process_frames, suffix=suffix)
+    vid = create_video(target_path, suffix=suffix)[1]
+    remove_frames(suffix)
+    return vid
