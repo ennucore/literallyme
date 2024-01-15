@@ -129,8 +129,11 @@ def process_frame(source_face: Face, temp_frame: Frame, save_face: str = '') -> 
     else:
         target_face = get_one_face(temp_frame)
     if save_face and target_face:
-        with open(save_face, 'wb') as f:
-            pickle.dump(target_face, f)
+        try:
+            with open(save_face, 'wb') as f:
+                pickle.dump(target_face, f)
+        except:
+            print('Failed to save face')
     if target_face:
         temp_frame = swap_face(source_face, target_face, temp_frame)
     return temp_frame
