@@ -6,7 +6,7 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
 
-from literallyme.utils import gen_pack_id
+from utils import gen_pack_id
 
 load_dotenv()
 

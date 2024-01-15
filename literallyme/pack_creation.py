@@ -24,7 +24,8 @@ async def create_sticker_pack(bot, user_id, documents: list[(int, int, bytes)], 
     name_suffix = name_suffix or gen_pack_id(user_id)
 
     stickers = []
-    for doc_id, doc_hash, doc_ref in documents:
+    emojis = '🗿🙂😏😂🙃😨🧐😏😁🫠' + '👍' * 100
+    for emoji, (doc_id, doc_hash, doc_ref) in zip(emojis, documents):
         input_document = types.InputDocument(
             id=doc_id,
             access_hash=doc_hash,
@@ -33,7 +34,7 @@ async def create_sticker_pack(bot, user_id, documents: list[(int, int, bytes)], 
         # convert to InputDocument
         stickers.append(types.InputStickerSetItem(
             document=input_document,
-            emoji="😀"  # Replace with desired emoji for the sticker
+            emoji=emoji  # Replace with desired emoji for the sticker
         ))
     print(stickers)
 
