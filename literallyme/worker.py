@@ -42,7 +42,11 @@ async def get_videos(bot, pack: StickerPack) -> list[(int, int, bytes)]:
             for path in paths
         ]
         for result in await asyncio.gather(*futures):
-            docs.append(await upload_file(bot, result))
+            try:
+                docs.append(await upload_file(bot, result))
+            except:
+                print(traceback.format_exc())
+                docs.append((0, 0, b''))
     # with ProcessPoolExecutor(max_workers=4) as pool:
     #     loop = asyncio.get_event_loop()
     #     futures = [
@@ -61,7 +65,7 @@ async def get_videos(bot, pack: StickerPack) -> list[(int, int, bytes)]:
 
 
 async def process_a_random_pack():
-    pack = StickerPack.random_queued_pack()
+    pack = StickerPack.random_queued_or_old_processing_pack()
     if pack is None:
         return
     print('Processing a pack')

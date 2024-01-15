@@ -26,6 +26,8 @@ async def create_sticker_pack(bot, user_id, documents: list[(int, int, bytes)], 
     stickers = []
     emojis = '🗿🙂😏😂🙃😨🧐😏😁🫠' + '👍' * 100
     for emoji, (doc_id, doc_hash, doc_ref) in zip(emojis, documents):
+        if not doc_id:
+            continue
         input_document = types.InputDocument(
             id=doc_id,
             access_hash=doc_hash,
