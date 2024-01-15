@@ -13,7 +13,7 @@ def process_sticker(filename: str) -> str:
     command = [
         'ffmpeg',
         '-i', filename,  # Input file
-        '-vf', "scale='min(512,iw):-1',colorkey=0x000000:0.03:0.03",
+        '-vf', "scale='min(512,iw):-1',colorkey=0x000000:0.003:0.003",
         '-y',  # Overwrite output file if it exists
         '-an',  # Remove audio
         '-t', '3',  # Set duration to 3 seconds
