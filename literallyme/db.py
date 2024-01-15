@@ -10,7 +10,6 @@ from utils import gen_pack_id
 
 load_dotenv()
 
-
 mongo = MongoClient(os.getenv('MONGO')).literalme
 
 
@@ -113,3 +112,17 @@ class StickerPack:
     @classmethod
     def random_generated_pack(cls) -> StickerPack | None:
         return cls.random_pack({'status': 'generated'})
+
+    @classmethod
+    def random_queued_or_old_processing_pack(cls) -> StickerPack | None:
+        ten_minutes_ago = int(time.time()) - 600
+        query = {
+            '$or': [
+                {'status': 'queued'},
+                {'$and': [
+                    {'status': 'processing'},
+                    {'stages_timestamps.processing': {'$lte': ten_minutes_ago}}
+                ]}
+            ]
+        }
+        return cls.random_pack(query)
