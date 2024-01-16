@@ -69,13 +69,16 @@ def extract_frames(target_path: str, fps: float = 20) -> bool:
          'fps=' + str(fps), os.path.join(temp_directory_path, '%04d.' + 'png')])
 
 
-def get_temp_output_path(target_path: str) -> str:
+def get_temp_output_path(target_path: str, suffix: str) -> str:
     temp_directory_path = get_temp_directory_path(target_path)
-    return os.path.join(temp_directory_path, TEMP_VIDEO_FILE)
+    filename = TEMP_VIDEO_FILE
+    if suffix:
+        filename = os.path.splitext(filename)[0] + suffix + os.path.splitext(filename)[1]
+    return os.path.join(temp_directory_path, filename)
 
 
 def create_video(target_path: str, fps: float = 20, suffix: str = '') -> (bool, str):
-    temp_output_path = get_temp_output_path(target_path)
+    temp_output_path = get_temp_output_path(target_path, suffix)
     temp_directory_path = get_temp_directory_path(target_path)
     output_video_quality = (OUTPUT_VIDEO_QUALITY + 1) * 51 // 100
     commands = ['-hwaccel', 'auto', '-r', str(fps), '-i',
