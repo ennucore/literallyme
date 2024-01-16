@@ -87,6 +87,9 @@ class StickerPack:
         if self.status == 'retrying1':
             self.set_status('retrying2')
             return
+        if self.status == 'retrying2':
+            self.set_status('retrying3')
+            return
         self.set_status('processing')
 
     def set_status(self, status: str):
@@ -136,6 +139,10 @@ class StickerPack:
                 {'$and': [
                     {'status': 'retrying1'},
                     {'stages_timestamps.retrying1': {'$lte': five_minutes_ago}}
+                ]},
+                {'$and': [
+                    {'status': 'retrying2'},
+                    {'stages_timestamps.retrying2': {'$lte': five_minutes_ago}}
                 ]}
             ]
         }

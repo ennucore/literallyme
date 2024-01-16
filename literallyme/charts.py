@@ -113,11 +113,11 @@ def get_charts(mongo) -> typing.List[bytes]:
         else:
             if len(pvt_packs):
                 pvt_packs.append(pvt_packs[-1] + 1)
-                pvt_time.append(datetime.fromtimestamp(timestamp))
+                pvt_time.append(timestamp)
             else:
                 pvt_time, pvt_packs = [timestamp], [1]
     pvt_fig, pvt_ax = plt.subplots(nrows=1, ncols=1)
-    pvt_time = [dt for dt in pvt_time if dt >= datetime.now() - timedelta(days=5)]
+    pvt_time = [dt for dt in pvt_time if datetime.fromtimestamp(dt) >= datetime.now() - timedelta(days=5)]
     pvt_ax.set_title('Packs vs. time: last 5 days')
     pvt_ax.set_ylabel('Packs')
     pvt_ax.set_xlabel('Time')
@@ -129,7 +129,9 @@ def get_charts(mongo) -> typing.List[bytes]:
     pvt_bytes.mime_type = 'image/png'
     pvt_bytes.name = 'chart-packs.png'
     pvt_bytes.filename = 'chart-packs.png'
-    pvt_ax.xaxis.set_ticks(mdates.drange(pvt_time[0], pvt_time[-1], (pvt_time[-1] - pvt_time[0]) / 5))
+    pvt_ax.xaxis.set_ticks(mdates.drange(datetime.fromtimestamp(pvt_time[0]), datetime.fromtimestamp(pvt_time[-1]),
+                                         (datetime.fromtimestamp(pvt_time[-1]) - datetime.fromtimestamp(pvt_time[0]))
+                                         / 5))
     pvt_fig.savefig(pvt_bytes)
     plt.close(pvt_fig)
     return charts
