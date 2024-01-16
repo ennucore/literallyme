@@ -19,7 +19,7 @@ async def documents_from_directory(bot, directory: str) -> list[(int, int, bytes
 async def create_sticker_pack(bot, user_id, documents: list[(int, int, bytes)], title='', name_suffix=''):
     # Initialize the client with your bot token
     bot_name = (await bot.get_me()).username
-    print(user_id, title, bot_name)
+    # print(user_id, title, bot_name)
     # Create a new sticker pack
     name_suffix = name_suffix or gen_pack_id(user_id)
 
@@ -38,7 +38,6 @@ async def create_sticker_pack(bot, user_id, documents: list[(int, int, bytes)], 
             document=input_document,
             emoji=emoji  # Replace with desired emoji for the sticker
         ))
-    print(stickers)
 
     sticker_set = await bot(functions.stickers.CreateStickerSetRequest(
         user_id=user_id,

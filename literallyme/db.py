@@ -48,7 +48,6 @@ class User:
         pack = StickerPack(pack_id=pack_id, user_id=self.user_id, input_photo=photo)
         pack.save_to_mongo()
         self.save_to_mongo()
-        print(pack)
         return pack
 
 

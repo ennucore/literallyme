@@ -134,4 +134,5 @@ def get_charts(mongo) -> typing.List[bytes]:
                                          / 5))
     pvt_fig.savefig(pvt_bytes)
     plt.close(pvt_fig)
+    charts.append(pvt_bytes.getvalue())
     return charts
