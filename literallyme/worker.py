@@ -21,7 +21,7 @@ sticker_paths = ['stickers/0/popcorn.webm', 'stickers/0/homelander.webm',
                  ]
 
 
-async def get_videos(bot, pack: StickerPack) -> list[(int, int, bytes)]:
+async def get_videos(bot, pack: StickerPack, delete: bool = False) -> list[(int, int, bytes)]:
     with open(pack.pack_id + '.png', 'wb') as f:
         f.write(pack.input_photo)
     docs = list()
@@ -47,6 +47,11 @@ async def get_videos(bot, pack: StickerPack) -> list[(int, int, bytes)]:
             except:
                 print(traceback.format_exc())
                 docs.append((0, 0, b''))
+            try:
+                if delete:
+                    os.remove(result)
+            except:
+                print(traceback.format_exc())
     # with ProcessPoolExecutor(max_workers=4) as pool:
     #     loop = asyncio.get_event_loop()
     #     futures = [

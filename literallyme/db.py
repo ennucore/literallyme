@@ -81,6 +81,12 @@ class StickerPack:
         return cls(**pack)
 
     def processing(self):
+        if self.status == 'processing':
+            self.set_status('retrying1')
+            return
+        if self.status == 'retrying1':
+            self.set_status('retrying2')
+            return
         self.set_status('processing')
 
     def set_status(self, status: str):
@@ -115,13 +121,17 @@ class StickerPack:
 
     @classmethod
     def random_queued_or_old_processing_pack(cls) -> StickerPack | None:
-        ten_minutes_ago = int(time.time()) - 600
+        five_minutes_ago = int(time.time()) - 600
         query = {
             '$or': [
                 {'status': 'queued'},
                 {'$and': [
                     {'status': 'processing'},
-                    {'stages_timestamps.processing': {'$lte': ten_minutes_ago}}
+                    {'stages_timestamps.processing': {'$lte': five_minutes_ago}}
+                ]},
+                {'$and': [
+                    {'status': 'retrying1'},
+                    {'stages_timestamps.retrying1': {'$lte': five_minutes_ago}}
                 ]}
             ]
         }
