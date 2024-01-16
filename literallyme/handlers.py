@@ -5,7 +5,7 @@ from telethon import events, TelegramClient
 
 from pack_creation import create_sticker_pack, documents_from_directory
 import db
-from charts import get_charts
+from charts import get_charts, get_stats
 import time
 
 
@@ -91,10 +91,13 @@ def apply_handlers(bot: TelegramClient):
         # await bot.send_message(event.sender_id, ['This is literally you:', 'Это буквально ты:'][user.lang == 'ru'])
         # await bot.send_file(event.sender_id, first_sticker)
 
-    @bot.on(events.NewMessage(pattern='/fancy_charts', func=lambda e: e.sender.username in ('ennucore', 'mb_ass')))
+    @bot.on(events.NewMessage(pattern='/fancy_charts', func=lambda e: e.sender.username in ('ennucore', )))
     async def send_stats(event):
         charts = get_charts(db.mongo)
         for chart in charts:
             await bot.send_file(event.sender, chart, force_document=False, caption='Chart')
 
-
+    @bot.on(events.NewMessage(pattern='/all_stats', func=lambda e: e.sender.username in ('ennucore', )))
+    async def send_text_stats(event):
+        stats = get_stats(db.mongo)
+        await bot.send_message(event.sender, stats)
