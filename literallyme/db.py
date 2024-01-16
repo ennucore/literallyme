@@ -117,7 +117,11 @@ class StickerPack:
 
     @classmethod
     def random_generated_pack(cls) -> StickerPack | None:
-        return cls.random_pack({'status': 'generated'})
+        # status is "generated" and "created" is not in stages_timestamps
+        return cls.random_pack({
+            'status': 'generated',
+            'stages_timestamps.created': {'$exists': False}
+        })
 
     @classmethod
     def random_queued_or_old_processing_pack(cls) -> StickerPack | None:

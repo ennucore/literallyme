@@ -113,7 +113,7 @@ def get_charts(mongo) -> typing.List[bytes]:
         else:
             if len(pvt_packs):
                 pvt_packs.append(pvt_packs[-1] + 1)
-                pvt_time.append(timestamp)
+                pvt_time.append(datetime.fromtimestamp(timestamp))
             else:
                 pvt_time, pvt_packs = [timestamp], [1]
     pvt_fig, pvt_ax = plt.subplots(nrows=1, ncols=1)
