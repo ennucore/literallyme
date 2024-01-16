@@ -87,7 +87,7 @@ def get_charts(mongo) -> typing.List[bytes]:
     charts.append(uvt_bytes.getvalue())
     uvt_fig, uvt_ax = plt.subplots(nrows=1, ncols=1)
     uvt_time = [dt for dt in uvt_time if dt >= datetime.now() - timedelta(days=5)]
-    uvt_ax.set_title('Users vs. time: last 5 days')
+    uvt_ax.set_title('@literalmebot Users vs. time: last 5 days')
     uvt_ax.set_ylabel('Users')
     uvt_ax.set_xlabel('Time')
     uvt_users = uvt_users[-len(uvt_time):]
@@ -118,7 +118,7 @@ def get_charts(mongo) -> typing.List[bytes]:
                 pvt_time, pvt_packs = [timestamp], [1]
     pvt_fig, pvt_ax = plt.subplots(nrows=1, ncols=1)
     pvt_time = [dt for dt in pvt_time if datetime.fromtimestamp(dt) >= datetime.now() - timedelta(days=5)]
-    pvt_ax.set_title('Packs vs. time: last 5 days')
+    pvt_ax.set_title('@literalmebot: Packs vs. time')
     pvt_ax.set_ylabel('Packs')
     pvt_ax.set_xlabel('Time')
     pvt_packs = pvt_packs[-len(pvt_time):]
