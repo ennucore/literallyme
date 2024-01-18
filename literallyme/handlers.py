@@ -46,8 +46,13 @@ async def finish_pack(bot, user, pack: db.StickerPack):
         pack.set_status('failed')
         return
 
-    await bot.send_message(user.user_id, ['This is literally you:', 'Это буквально ты:'][user.lang == 'ru'])
+    await bot.send_message(user.user_id, ['This is literally you (or the person from the picture):',
+                                          'Это буквально ты (или человек с картинки):'][user.lang == 'ru'])
     await bot.send_file(user.user_id, first_sticker)
+    await bot.send_message(user.user_id, [
+        'My friend told me that it might not be obvious that the bot generates an entire stickerpack and that you can click on the sticker to add the pack, but I believe in you',
+        'Мой дружочек сказал мне, что может быть неочевидно, что можно нажать на стикер и добавить себе целый пак, но это же не так, правда?',
+    ][user.lang == 'ru'])
 
 
 async def finish_packs(bot: TelegramClient):
@@ -65,8 +70,10 @@ def apply_handlers(bot: TelegramClient):
     async def start(event):
         """Send a welcome message when the user starts the bot"""
         lang = ['en', 'ru'][event.sender.lang_code == 'ru']
-        await event.respond(['Hi! Send me a photo and I will create a sticker pack for you.',
-                             'Привет! Пришли мне фото и я создам для тебя стикерпак буквально с тобой.'][lang == 'ru'])
+        await event.respond(
+            ['Hi! Send me a photo of a person and I will create a sticker pack with that person for you.',
+             'Привет! Пришли мне фото и я создам для тебя стикерпак буквально с тобой (или человеком с картинки).'][
+                lang == 'ru'])
         db.User.from_mongo(event.sender_id, create_if_not_exists=True, lang=lang)
 
     @bot.on(events.NewMessage(func=lambda e: e.photo))
@@ -91,13 +98,13 @@ def apply_handlers(bot: TelegramClient):
         # await bot.send_message(event.sender_id, ['This is literally you:', 'Это буквально ты:'][user.lang == 'ru'])
         # await bot.send_file(event.sender_id, first_sticker)
 
-    @bot.on(events.NewMessage(pattern='/fancy_charts', func=lambda e: e.sender.username in ('ennucore', )))
+    @bot.on(events.NewMessage(pattern='/fancy_charts', func=lambda e: e.sender.username in ('ennucore',)))
     async def send_stats(event):
         charts = get_charts(db.mongo)
         for chart in charts:
             await bot.send_file(event.sender, chart, force_document=False, caption='Chart')
 
-    @bot.on(events.NewMessage(pattern='/all_stats', func=lambda e: e.sender.username in ('ennucore', )))
+    @bot.on(events.NewMessage(pattern='/all_stats', func=lambda e: e.sender.username in ('ennucore',)))
     async def send_text_stats(event):
         stats = get_stats(db.mongo)
         await bot.send_message(event.sender, stats)
