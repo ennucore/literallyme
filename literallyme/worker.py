@@ -17,6 +17,9 @@ sticker_paths = ['stickers/0/popcorn.webm', 'stickers/0/homelander.webm',
                  'stickers/0/008_thumbs_up.webm', 'stickers/0/cena.webm',
                  'stickers/0/homelander2.webm', 'stickers/0/idk.webm',
                  'stickers/0/margo.webm', 'stickers/0/ponasenkov.webm', 'stickers/0/rock.webm',
+                 'stickers/0/gachi.webm', 'stickers/0/saul.webm', 'stickers/0/kiss.webm',
+                 'stickers/0/taking_photo.webm', 'stickers/0/looking.webm', 'stickers/0/dancing.webm',
+                 'stickers/0/homelander_blood.webm',
                  # 'stickers/0/007_face_with_symbols_on_mouth.webm', 'stickers/0/003_slightly_smiling_face.webm'
                  ]
 
