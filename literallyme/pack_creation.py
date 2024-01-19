@@ -40,8 +40,8 @@ async def create_sticker_pack(bot, user_id, documents: list[(int, int, bytes)], 
             emoji=emoji  # Replace with desired emoji for the sticker
         ))
 
-    final_sticker_data = (5285307220253230074, 1812954357037566440,
-                          b'\x03\x00\x00"\re\xaa\x92\xfe=\xd4R\xccn\xebc8J\xf9y\x7f\xf6\xaf\xe6\xbd')
+    final_sticker_data = (5285307220253230406, 4934858480140185315,
+                          b'\x03\x00\x00"\xb2e\xaa\xa0f\xc1\xb5\'\xae\xb8\x15~\xdc\x9a\xc3\x9b\t\xbe\xe8\xe2x')
     input_document = types.InputDocument(
         id=final_sticker_data[0],
         access_hash=final_sticker_data[1],
