@@ -2,6 +2,9 @@ import os
 import subprocess
 import random
 
+from telethon.tl.types import InputMediaUploadedDocument, InputPeerSelf
+from telethon.tl.functions.messages import UploadMediaRequest
+
 
 def gen_pack_id(user_id: int) -> str:
     return f"literally{user_id}_{random.randint(0, 10000)}"
@@ -32,6 +35,7 @@ async def upload_file(bot, file_path: str) -> (int, int, bytes):
     # Upload the file and return the tuple (id, access_hash, file_reference)
     with open(file_path, 'rb') as file:
         uploaded_file = await bot.upload_file(file)
-        message = await bot.send_file("@dtit0v", uploaded_file)
-        document = message.media.document
+
+        file = InputMediaUploadedDocument(uploaded_file, "video/webm", [])
+        document = await bot(UploadMediaRequest(InputPeerSelf(), file))
         return document.id, document.access_hash, document.file_reference
