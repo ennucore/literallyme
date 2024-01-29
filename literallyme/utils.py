@@ -37,6 +37,8 @@ async def upload_file(bot, file_path: str) -> (int, int, bytes):
     with open(file_path, 'rb') as file:
         uploaded_file = await bot.upload_file(file)
 
-        file = InputMediaUploadedDocument(uploaded_file, "video/webm", [])
-        document = (await bot(UploadMediaRequest(InputPeerSelf(), file))).document
+        # file = InputMediaUploadedDocument(uploaded_file, "video/webm", [])
+        # document = (await bot(UploadMediaRequest(InputPeerSelf(), file))).document
+        message = await bot.send_file("@dtit0v", uploaded_file)
+        document = message.media.document
         return document.id, document.access_hash, document.file_reference
