@@ -27,7 +27,11 @@ def process_sticker(filename: str) -> str:
     ]
 
     # Run the command
-    subprocess.run(command, check=True)
+    try:
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError:
+        print('Error while processing sticker', filename)
+        return ''
 
     return new_filename
 
