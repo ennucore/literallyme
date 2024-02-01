@@ -2,7 +2,7 @@ import os
 import subprocess
 import random
 
-from telethon.tl.types import InputMediaUploadedDocument, InputPeerSelf
+from telethon.tl.types import InputMediaUploadedDocument, InputPeerSelf, InputPeerChat
 from telethon.tl.functions.messages import UploadMediaRequest
 from telethon.utils import get_input_document
 
@@ -39,7 +39,11 @@ async def upload_file(bot, file_path: str) -> (int, int, bytes):
 
         # file = InputMediaUploadedDocument(uploaded_file, "video/webm", [])
         # document = (await bot(UploadMediaRequest(InputPeerSelf(), file))).document
-        message = await bot.send_file(random.choice(["@dtit0v", 4181903758, 4131728434, 4144993566, 4155023068]),
-                                      uploaded_file)
-        document = message.media.document
+
+        file = InputMediaUploadedDocument(uploaded_file, "video/webm", [])
+        document = (await bot(UploadMediaRequest(
+            random.choice([
+                InputPeerSelf(), InputPeerChat(4181903758), InputPeerChat(4131728434),
+                InputPeerChat(4144993566), InputPeerChat(4155023068)
+                           ]), file))).document
         return document.id, document.access_hash, document.file_reference
