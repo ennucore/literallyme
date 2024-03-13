@@ -32,8 +32,7 @@ async def get_videos(bot, pack: StickerPack, delete: bool = False) -> list[(int,
     for sticker in sticker_paths:
         path = fully_process_video(pack.pack_id + '.png', sticker)
         paths.append(path)
-        # file_path = process_sticker(path)
-        # docs.append(await upload_file(bot, file_path))
+
     with ProcessPoolExecutor(max_workers=4) as pool:
         loop = asyncio.get_event_loop()
         futures = [
@@ -55,31 +54,18 @@ async def get_videos(bot, pack: StickerPack, delete: bool = False) -> list[(int,
                     os.remove(result)
             except:
                 print(traceback.format_exc())
-    # with ProcessPoolExecutor(max_workers=4) as pool:
-    #     loop = asyncio.get_event_loop()
-    #     futures = [
-    #         loop.run_in_executor(
-    #             pool,
-    #             fully_process_video,
-    #             pack.pack_id + '.png',
-    #             sticker
-    #         )
-    #         for sticker in sticker_paths
-    #     ]
-    #     for result in await asyncio.gather(*futures):
-    #         file_path = process_sticker(result)
-    #         docs.append(await upload_file(bot, file_path))
+
     return docs
 
 
 async def process_a_random_pack():
-    pack = StickerPack.random_queued_or_old_processing_pack()
+    pack = await StickerPack.random_queued_or_old_processing_pack()
     if pack is None:
         return
     print('Processing a pack')
-    pack.processing()
+    await pack.processing()
     docs = await get_videos(bot, pack)
-    pack.add_docs(docs)
+    await pack.add_docs(docs)
 
 
 async def main():

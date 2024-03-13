@@ -1,8 +1,6 @@
 import asyncio
 import traceback
-
 from telethon import events, TelegramClient
-
 from pack_creation import create_sticker_pack, documents_from_directory
 import db
 from charts import get_charts, get_stats
@@ -17,15 +15,15 @@ async def get_videos(bot, pack) -> list[(id, id, bytes)]:
 
 
 async def generate_videos(bot, pack: db.StickerPack) -> db.StickerPack:
-    pack.processing()
+    await pack.processing()
     docs = await get_videos(bot, pack)
-    pack.add_docs(docs)
+    await pack.add_docs(docs)
     return pack
 
 
 async def wait_for_video_generation(pack: db.StickerPack) -> db.StickerPack:
     while pack.status != 'generated':
-        pack = db.StickerPack.from_mongo(pack.pack_id)
+        pack = await db.StickerPack.from_mongo(pack.pack_id)
         await asyncio.sleep(2)
     return pack
 
@@ -34,7 +32,7 @@ async def create_pack(bot, pack: db.StickerPack):
     tg_pack = await create_sticker_pack(bot, pack.user_id, pack.documents, name_suffix=pack.pack_id)
     pack.status = 'created'
     pack.stages_timestamps['created'] = int(time.time())
-    pack.save_to_mongo()
+    await pack.save_to_mongo()
     return tg_pack
 
 
@@ -43,11 +41,11 @@ async def finish_pack(bot, user, pack: db.StickerPack):
         first_sticker = (await create_pack(bot, pack)).documents[0]
     except Exception:
         print(traceback.format_exc())
-        pack.set_status('failed')
+        await pack.set_status('failed')
         return
 
     await bot.send_message(user.user_id, ['This is literally you (or the person from the picture):',
-                                          'Это буквально ты (или человек с картинки):'][user.lang == 'ru'])
+                                           'Это буквально ты (или человек с картинки):'][user.lang == 'ru'])
     await bot.send_file(user.user_id, first_sticker)
     await bot.send_message(user.user_id, [
         'My friend told me that it might not be obvious that the bot generates an entire stickerpack and that you can '
@@ -59,11 +57,11 @@ async def finish_pack(bot, user, pack: db.StickerPack):
 
 async def finish_packs(bot: TelegramClient):
     while True:
-        pack = db.StickerPack.random_generated_pack()
+        pack = await db.StickerPack.random_generated_pack()
         if pack is None:
             await asyncio.sleep(1)
             continue
-        user = db.User.from_mongo(pack.user_id)
+        user = await db.User.from_mongo(pack.user_id)
         await finish_pack(bot, user, pack)
 
 
@@ -76,17 +74,17 @@ def apply_handlers(bot: TelegramClient):
             ['Hi! Send me a photo of a person and I will create a sticker pack with that person for you.',
              'Привет! Пришли мне фото и я создам для тебя стикерпак буквально с тобой (или человеком с картинки).'][
                 lang == 'ru'])
-        db.User.from_mongo(event.sender_id, create_if_not_exists=True, lang=lang)
+        await db.User.from_mongo(event.sender_id, create_if_not_exists=True, lang=lang)
 
     @bot.on(events.NewMessage(func=lambda e: e.photo))
     async def photo_handler(event):
         """Handle photo messages"""
         # Download photo sent by the user to the "photos" folder
-        user = db.User.from_mongo(event.sender_id, lang=['en', 'ru'][event.sender.lang_code == 'ru'])
+        user = await db.User.from_mongo(event.sender_id, lang=['en', 'ru'][event.sender.lang_code == 'ru'])
         photo_path = await event.message.download_media('photos/')
         with open(photo_path, 'rb') as file:
             photo = file.read()
-            pack = user.new_pack(photo)
+        pack = await user.new_pack(photo)
         await bot.send_message(event.sender_id, [
             'Creating your pack, please, be patient, as this can take a lot of time - you\'re in a queue. ',
             # 'You can subscribe to @levchizhov while you wait to read walls of text from the creator of this bot',
@@ -102,11 +100,11 @@ def apply_handlers(bot: TelegramClient):
 
     @bot.on(events.NewMessage(pattern='/fancy_charts', func=lambda e: e.sender.username in ('ennucore',)))
     async def send_stats(event):
-        charts = get_charts(db.mongo)
+        charts = await get_charts(db.mongo)
         for chart in charts:
             await bot.send_file(event.sender, chart, force_document=False, caption='Chart')
 
     @bot.on(events.NewMessage(pattern='/all_stats', func=lambda e: e.sender.username in ('ennucore',)))
     async def send_text_stats(event):
-        stats = get_stats(db.mongo)
+        stats = await get_stats(db.mongo)
         await bot.send_message(event.sender, stats)

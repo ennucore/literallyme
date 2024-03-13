@@ -9,29 +9,28 @@ import time
 sns.set_theme()
 
 
-def get_stats(mongo) -> str:
-    total_users = mongo.users.count_documents({})
-    new_users_today = mongo.users.count_documents(
+async def get_stats(mongo) -> str:
+    total_users = await mongo.users.count_documents({})
+    new_users_today = await mongo.users.count_documents(
         {'start_timestamp': {'$gt': int(time.time() - 24 * 3600)}}
     )
-    new_users_week = mongo.users.count_documents(
+    new_users_week = await mongo.users.count_documents(
         {'start_timestamp': {'$gt': int(time.time() - 24 * 3600 * 7)}}
     )
-
-    total_packs = mongo.sticker_packs.count_documents({})
-    new_packs_today = mongo.sticker_packs.count_documents(
+    total_packs = await mongo.sticker_packs.count_documents({})
+    new_packs_today = await mongo.sticker_packs.count_documents(
         {'timestamp': {'$gt': int(time.time() - 24 * 3600)}}
     )
     packs_by_status = dict()
     packs_by_status_today = dict()
     for status in ['queued', 'processing', 'retrying1', 'retrying2', 'generated', 'created', 'failed']:
-        packs_by_status[status] = mongo.sticker_packs.count_documents({'status': status})
-        packs_by_status_today[status] = mongo.sticker_packs.count_documents({
+        packs_by_status[status] = await mongo.sticker_packs.count_documents({'status': status})
+        packs_by_status_today[status] = await mongo.sticker_packs.count_documents({
             'status': status,
             'timestamp': {'$gt': int(time.time() - 24 * 3600)}
         })
     # stages_timestamps difference between processing and generated
-    average_processing_time_today = mongo.sticker_packs.aggregate([
+    average_processing_time_today = await mongo.sticker_packs.aggregate([
         {'$match': {
             'stages_timestamps.processing': {'$exists': True},
             'stages_timestamps.generated': {'$exists': True},
@@ -44,7 +43,7 @@ def get_stats(mongo) -> str:
             '_id': None,
             'average_processing_time': {'$avg': '$processing_time'}
         }}
-    ])
+    ]).to_list(length=1)
     return f'''Total users: {total_users}
 New users today: {new_users_today}
 New users this week: {new_users_week}
@@ -52,13 +51,13 @@ Total packs: {total_packs}
 New packs today: {new_packs_today}
 Packs by status: {packs_by_status}
 Packs by status today: {packs_by_status_today}
-Average processing time today: {list(average_processing_time_today)}'''
+Average processing time today: {average_processing_time_today}'''
 
 
-def get_charts(mongo) -> typing.List[bytes]:
+async def get_charts(mongo) -> typing.List[bytes]:
     charts = list()
     uvt_time, uvt_users = list(), list()
-    for user in mongo.users.find({}):
+    async for user in mongo.users.find({}):
         if not user.get('start_timestamp'):
             continue
         timestamp = user['start_timestamp']
@@ -104,7 +103,7 @@ def get_charts(mongo) -> typing.List[bytes]:
     charts.append(uvt_bytes.getvalue())
     # Packs vs. time (last 5 days)
     pvt_time, pvt_packs = list(), list()
-    for pack in mongo.sticker_packs.find({}):
+    async for pack in mongo.sticker_packs.find({}):
         if not pack.get('timestamp'):
             continue
         timestamp = pack['timestamp']
