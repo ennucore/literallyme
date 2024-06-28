@@ -5,10 +5,11 @@ import glob
 from typing import List
 import subprocess
 
-TEMP_DIRECTORY = 'temp'
+TEMP_DIRECTORY = '/Data/temp'
 TEMP_VIDEO_FILE = 'temp.mp4'
 output_video_encoder = 'libx264'
 TEMP_FRAME_QUALITY, OUTPUT_VIDEO_QUALITY = 0, 35
+os.makedirs(TEMP_DIRECTORY, exist_ok=True)
 
 
 def conditional_download(download_directory_path: str, urls: List[str]) -> None:
@@ -32,7 +33,7 @@ def resolve_relative_path(path: str) -> str:
 def get_temp_directory_path(target_path: str) -> str:
     target_name, _ = os.path.splitext(os.path.basename(target_path))
     target_directory_path = os.path.dirname(target_path)
-    temp_dir = os.path.join(target_directory_path, TEMP_DIRECTORY, target_name)
+    temp_dir = os.path.join(TEMP_DIRECTORY, target_directory_path, target_name)
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)
     return temp_dir

@@ -19,6 +19,7 @@ numpy = "^1.26.3"
 insightface = "0.7"
 onnxruntime = "^1.16.3"
 motor = "^3.3.2"
+onnxruntime-gpu = "^1.16.3"
 
 
 [build-system]
