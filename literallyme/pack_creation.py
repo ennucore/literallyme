@@ -24,8 +24,19 @@ async def create_sticker_pack(bot, user_id, documents: list[(int, int, bytes)], 
     name_suffix = name_suffix or gen_pack_id(user_id)
 
     stickers = []
-    emojis = ['🗿', '🙂', '😏', '😂', '🙃', '😨', '🧐', '😏', '😁', '🫠', '🗿👍', '💪🌈',
-              '😡', '😘💋', '🤡📷', '👀', '🕺', '🩸'] + ['👍'] * 100
+    emojis = ['🗿🍿🍫', 
+              #'🙂', '😏', 
+              '😂😄🤣', '🙃👍', 
+              '😱😨😰', # cena
+              '😱😨😰', # homelander
+              '🧐👀🤯', 
+              '😏', 
+              '🧠', 
+              '🫠', '🗿👍', '💪🌈',
+              #'😡', 
+              '😘💋', '🤡📷', 
+              #'👀', 
+              '🕺🥛🎉', '🩸'] + ['👍'] * 100
     for emoji, (doc_id, doc_hash, doc_ref) in zip(emojis, documents):
         if not doc_id:
             continue
