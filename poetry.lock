@@ -1144,6 +1144,33 @@ protobuf = "*"
 sympy = "*"
 
 [[package]]
+name = "onnxruntime-gpu"
+version = "1.18.1"
+description = "ONNX Runtime is a runtime accelerator for Machine Learning models"
+optional = false
+python-versions = "*"
+files = [
+    {file = "onnxruntime_gpu-1.18.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e9de7b8c7c975f7830d1e9323daca2090408df821f2adc10ea267b4f469b59e0"},
+    {file = "onnxruntime_gpu-1.18.1-cp310-cp310-win_amd64.whl", hash = "sha256:7622a5979bb64a6631f888439b6ac8b11fbdd47da980425c697b82d4dd04b427"},
+    {file = "onnxruntime_gpu-1.18.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:af2d3ee6fba72b57abf6f379b8aca30ee773959d4346271e7d92557dd5cf2901"},
+    {file = "onnxruntime_gpu-1.18.1-cp311-cp311-win_amd64.whl", hash = "sha256:e40ba43771043fe286fea38b2c6549d1cc4b2b5b424624163c923163a8dc27ac"},
+    {file = "onnxruntime_gpu-1.18.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:87d1884523f485f40d3a126677a9f93fc15569dd817fc753ee7fc519142a4425"},
+    {file = "onnxruntime_gpu-1.18.1-cp312-cp312-win_amd64.whl", hash = "sha256:3f2ab38a62350965f5007111728410b3ef25213104dd1e7d61ecc158002ea3f5"},
+    {file = "onnxruntime_gpu-1.18.1-cp38-cp38-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:96e665393934cd6a2d7f5c4a8449815fc88e6afaeafc0b1da795545fabc7624f"},
+    {file = "onnxruntime_gpu-1.18.1-cp38-cp38-win_amd64.whl", hash = "sha256:5ba076faa5c6fdccf99a607ea0910f066ad4f53c472269ac9f5768c5193aa6c7"},
+    {file = "onnxruntime_gpu-1.18.1-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d39d3ff85eaa70d85401bd81f675b44959a135fdfb2a21383f424d1f8f290c32"},
+    {file = "onnxruntime_gpu-1.18.1-cp39-cp39-win_amd64.whl", hash = "sha256:126035cd623445f9922ca0f277cf18ffc83d7e073c0c5c8057eee37f22e24440"},
+]
+
+[package.dependencies]
+coloredlogs = "*"
+flatbuffers = "*"
+numpy = ">=1.21.6,<2.0"
+packaging = "*"
+protobuf = "*"
+sympy = "*"
+
+[[package]]
 name = "opencv-python-headless"
 version = "4.10.0.84"
 description = "Wrapper package for OpenCV python bindings."
@@ -2218,4 +2245,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "15ba94ddbcabda884f13369148f4a2f249e6973e953ab9912f6924ae3aa743ab"
+content-hash = "c0c86ef1cb284a6b659a6057497edd5b5b19943a12eae587868671c35d48f69e"

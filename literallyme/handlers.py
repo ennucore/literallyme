@@ -49,9 +49,9 @@ async def finish_pack(bot, user, pack: db.StickerPack):
     await bot.send_file(user.user_id, first_sticker)
     await bot.send_message(user.user_id, [
         'My friend told me that it might not be obvious that the bot generates an entire stickerpack and that you can '
-        'click on the sticker to add the pack, but I believe in you\nBy the way, you can get stats for you sticker pack by going to @Stickers and clicking /packstats',
+        'click on the sticker to add the pack, but I believe in you\nBy the way, you can get stats for you sticker pack by going to @Stickers and clicking /packstats\n\nAlso, subscribe to @levchizhov',
         'Мой дружочек сказал мне, что может быть неочевидно, что можно нажать на стикер и добавить себе целый пак, '
-        'но это же не так, правда?\nКстати, если зайти в @Stickers и нажать /packstats, то можно получить статистику по стикерпаку',
+        'но это же не так, правда?\nКстати, если зайти в @Stickers и нажать /packstats, то можно получить статистику по стикерпаку\n\nА еще подпишись на @levchizhov',
     ][user.lang == 'ru'])
 
 
