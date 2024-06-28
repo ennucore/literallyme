@@ -6,7 +6,7 @@ os.environ['worker'] = '1'
 
 from bot import bot
 from db import StickerPack
-from utils import upload_file, process_sticker
+from utils import upload_file, process_sticker, lock_file, get_username
 from concurrent.futures import ProcessPoolExecutor
 
 from swapper.swap import fully_process_video
@@ -78,4 +78,5 @@ async def main():
         await asyncio.sleep(1)
 
 
+lock_file('locks/' + get_username() + '.lock')
 bot.loop.run_until_complete(main())

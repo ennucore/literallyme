@@ -1,6 +1,9 @@
 import os
 import subprocess
 import random
+import fcntl
+import getpass
+import socket
 
 from telethon.tl.types import InputMediaUploadedDocument, InputPeerSelf, InputPeerChat
 from telethon.tl.functions.messages import UploadMediaRequest
@@ -51,3 +54,14 @@ async def upload_file(bot, file_path: str) -> (int, int, bytes):
                 InputPeerChat(4144993566), InputPeerChat(4155023068)
                            ]), file))).document
         return document.id, document.access_hash, document.file_reference
+
+
+def lock_file(file_path: str):
+    with open(file_path, 'w') as file:
+        file.write(str(os.getpid()))
+        fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def get_username() -> str:
+    return getpass.getuser() + '@' + socket.gethostname()
+
