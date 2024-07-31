@@ -1,5 +1,5 @@
 import insightface
-from .utils import resolve_relative_path, conditional_download, extract_frames, get_temp_frame_paths, create_video, remove_frames
+from literallyme.swapper.utils import resolve_relative_path, conditional_download, extract_frames, get_temp_frame_paths, create_video, remove_frames
 import numpy
 from queue import Queue
 import threading
@@ -11,7 +11,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import random
 import cv2
 import os
+import sys
 import pickle
+import traceback
 import onnxruntime
 
 Frame = numpy.ndarray[Any, Any]
@@ -29,7 +31,7 @@ def suggest_execution_threads() -> int:
     return 8
 
 
-EXECUTION_THREADS = suggest_execution_threads()
+EXECUTION_THREADS = 8
 
 
 def get_face_analyser() -> Any:
@@ -38,6 +40,7 @@ def get_face_analyser() -> Any:
     with THREAD_LOCK:
         if FACE_ANALYSER is None:
             FACE_ANALYSER = insightface.app.FaceAnalysis(name='buffalo_l')
+            # FACE_ANALYSER.prepare(ctx_id=0, det_size=(640, 640))  #det_thresh=0.2, det_size=(256, 256))
             FACE_ANALYSER.prepare(ctx_id=0, det_thresh=0.2, det_size=(256, 256))
     return FACE_ANALYSER
 
@@ -95,31 +98,40 @@ def get_face_swapper() -> Any:
 def multi_process_frame(source_path: str, temp_frame_paths: List[str],
                         process_frames: Callable[[str, List[str], Any, str], None], update: Callable[[], None],
                         suffix: str = '') -> None:
+    source_face = get_one_face(cv2.imread(source_path))
+    if not source_face:
+        return 'noface'
+    swapper = get_face_swapper()
     with ThreadPoolExecutor(max_workers=EXECUTION_THREADS) as executor:
         futures = []
         queue = create_queue(temp_frame_paths)
         queue_per_future = max(len(temp_frame_paths) // EXECUTION_THREADS, 1)
         while not queue.empty():
-            future = executor.submit(process_frames, source_path, pick_queue(queue, queue_per_future), update, suffix)
+            future = executor.submit(process_frames, source_path, pick_queue(queue, queue_per_future), update, suffix, '', swapper)
             futures.append(future)
         for future in as_completed(futures):
-            future.result()
+            res = future.result()
+    return res
 
 
 def process_video(source_path: str, frame_paths: list[str],
-                  process_frames: Callable[[str, List[str], Any, str], None], suffix: str = '') -> None:
+                  process_frames: Callable[[str, List[str], Any, str], None], suffix: str = '', workdir: str = '') -> None | str:
     progress_bar_format = '{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]'
     total = len(frame_paths)
     with tqdm(total=total, desc='Processing', unit='frame', dynamic_ncols=True,
               bar_format=progress_bar_format) as progress:
-        multi_process_frame(source_path, frame_paths, process_frames, lambda: update_progress(progress), suffix)
+        try:
+            return multi_process_frame(source_path, frame_paths, process_frames, lambda: update_progress(progress), suffix)
+            # return process_frames(source_path, frame_paths, lambda: update_progress(progress), suffix, workdir=workdir)
+        except:
+            print(traceback.format_exc())
 
 
-def swap_face(source_face: Face, target_face: Face, temp_frame: Frame) -> Frame:
-    return get_face_swapper().get(temp_frame, target_face, source_face, paste_back=True)
+def swap_face(source_face: Face, target_face: Face, temp_frame: Frame, swapper=None) -> Frame:
+    return (swapper or get_face_swapper()).get(temp_frame, target_face, source_face, paste_back=True)
 
 
-def process_frame(source_face: Face, temp_frame: Frame, save_face: str = '') -> Frame:
+def process_frame(source_face: Face, temp_frame: Frame, save_face: str = '', swapper=None) -> Frame:
     if os.path.exists(save_face):
         with open(save_face, 'rb') as f:
             try:
@@ -132,23 +144,30 @@ def process_frame(source_face: Face, temp_frame: Frame, save_face: str = '') -> 
         try:
             with open(save_face, 'wb') as f:
                 pickle.dump(target_face, f)
-        except:
-            print('Failed to save face')
+        except Exception as e:
+            # print('Failed to save face:', e)
+            pass
     if target_face:
-        temp_frame = swap_face(source_face, target_face, temp_frame)
+        temp_frame = swap_face(source_face, target_face, temp_frame, swapper=swapper)
     return temp_frame
 
 
-def process_frames(source_path: str, temp_frame_paths: List[str], update: Callable[[], None], suffix: str = '') -> None:
+def process_frames(source_path: str, temp_frame_paths: List[str], update: Callable[[], None], suffix: str = '', workdir: str = '', swapper=None) -> None:
+    print(f'Getting one face from the source path {source_path}')
+    workdir = workdir or os.path.join(os.path.dirname(temp_frame_paths[0]), 'swapped' + suffix)
+    print('Workdir:', workdir)
+    os.makedirs(workdir, exist_ok=True)
     source_face = get_one_face(cv2.imread(source_path))
+    if not source_face:
+        return 'noface'
     for temp_frame_path in temp_frame_paths:
-        if '.sw' in temp_frame_path:
-            continue
         temp_frame = cv2.imread(temp_frame_path)
-        result = process_frame(source_face, temp_frame, temp_frame_path.replace('.png', '.face'))
-        cv2.imwrite(temp_frame_path.replace('.png', '.sw' + suffix + '.png'), result)
+        result = process_frame(source_face, temp_frame, temp_frame_path.replace('.png', '.face'), swapper=swapper)
+        result_path = os.path.join(workdir, os.path.basename(temp_frame_path).replace('.png', '.sw' + suffix + '.png'))
+        cv2.imwrite(result_path, result)
         if update:
             update()
+    return workdir
 
 
 def update_progress(progress: Any = None) -> None:
@@ -177,13 +196,21 @@ def pick_queue(queue: Queue[str], queue_per_future: int) -> List[str]:
     return queues
 
 
-def fully_process_video(input_path: str, target_path: str):
+def fully_process_video(input_path: str, target_path: str, workdir: str = ''):
     pre_check()
     extract_frames(target_path)
     frame_paths = get_temp_frame_paths(target_path)
     print(f'Extracted {len(frame_paths)} frames, first one is {frame_paths[0]}')
-    suffix = f'.{random.randint(0, 1000000)}'
-    process_video(input_path, frame_paths, process_frames, suffix=suffix)
-    vid = create_video(target_path, suffix=suffix)[1]
+    suffix = f'.{random.randint(0, 100000000)}'
+    workdir = process_video(input_path, frame_paths, process_frames, suffix=suffix, workdir=workdir)
+    if workdir == 'noface':
+        return ''
+    vid = create_video(workdir, os.path.join(workdir, 'out.mp4'), suffix=suffix)[1]
+    print(vid)
+    print(os.listdir(os.path.dirname(vid)))
     remove_frames(suffix)
     return vid
+
+
+if __name__ == '__main__':
+    print(fully_process_video(*sys.argv[-2:]))

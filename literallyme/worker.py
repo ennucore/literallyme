@@ -1,6 +1,7 @@
 import os
 import traceback
 import asyncio
+import sys
 
 os.environ['worker'] = '1'
 
@@ -31,44 +32,72 @@ sticker_paths = ['stickers/0/popcorn.webm',
 
 
 async def get_videos(bot, pack: StickerPack, delete: bool = False) -> list[(int, int, bytes)]:
-    with open(pack.pack_id + '.png', 'wb') as f:
+    with open('photos/' + pack.pack_id + '.png', 'wb') as f:
         f.write(pack.input_photo)
     docs = list()
     paths = list()
-    for sticker in sticker_paths:
-        path = fully_process_video(pack.pack_id + '.png', sticker)
-        paths.append(path)
+    # for sticker in sticker_paths:
+    #     print(f'Processing sticker {sticker}')
+    #     paths.append(fully_process_video('photos/' + pack.pack_id + '.png', sticker))
+    #     print(f'Done: {paths[-1]}')
 
     with ProcessPoolExecutor(max_workers=4) as pool:
         loop = asyncio.get_event_loop()
         futures = [
             loop.run_in_executor(
                 pool,
-                process_sticker,
-                path
+                fully_process_video,
+                'photos/' + pack.pack_id + '.png', sticker
             )
-            for path in paths
+            for sticker in sticker_paths
         ]
         for result in await asyncio.gather(*futures):
-            try:
-                docs.append(await upload_file(bot, result))
-            except:
-                print(traceback.format_exc())
-                docs.append((0, 0, b''))
-            try:
-                if delete:
-                    os.remove(result)
-            except:
-                print(traceback.format_exc())
+            paths.append(result)
+
+    # with ProcessPoolExecutor(max_workers=4) as pool:
+    #     loop = asyncio.get_event_loop()
+    #     futures = [
+    #         loop.run_in_executor(
+    #             pool,
+    #             process_sticker,
+    #             path
+    #         )
+    #         for path in paths
+    #     ]
+    #     for result in await asyncio.gather(*futures):
+    #         try:
+    #             docs.append(await upload_file(bot, result))
+    #         except:
+    #             print(traceback.format_exc())
+    #             docs.append((0, 0, b''))
+    #         try:
+    #             if delete:
+    #                 os.remove(result)
+    #         except:
+    #             print(traceback.format_exc())
+    for path in paths:
+        try:
+            docs.append(await upload_file(bot, path))
+        except:
+            print(traceback.format_exc())
+            docs.append((0, 0, b''))
+        try:
+            if delete:
+                os.remove(path)
+        except:
+            print(traceback.format_exc())
 
     return docs
 
 
-async def process_a_random_pack():
-    pack = await StickerPack.random_queued_or_old_processing_pack()
+async def process_a_pack(pack_id=None):
+    if not pack_id:
+        pack = await StickerPack.random_queued_or_old_processing_pack()
+    else:
+        pack = await StickerPack.from_mongo(pack_id)
     if pack is None:
         return
-    print('Processing a pack')
+    print('Processing pack', pack.pack_id)
     await pack.processing()
     docs = await get_videos(bot, pack)
     await pack.add_docs(docs)
@@ -84,5 +113,8 @@ async def main():
         await asyncio.sleep(1)
 
 
-lock_file('locks/' + get_username() + '.lock')
-bot.loop.run_until_complete(main())
+if sys.argv[-1].startswith('id:'):
+    bot.loop.run_until_complete(process_a_pack(sys.argv[-1][3:]))
+else:
+    lock_file('locks/' + get_username() + '.lock')
+    bot.loop.run_until_complete(main())
