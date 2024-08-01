@@ -10,6 +10,9 @@ api_hash = os.getenv('TG_API_HASH')
 bot_token = os.getenv('BOT_TOKEN')
 
 # Initialize the bot client
-bot = (TelegramClient('bot' if not os.getenv('worker') else f'worker-{random.randint(0, 1000000)}', api_id, api_hash)
+bot = (
+    TelegramClient(
+    'bot', # if not os.getenv('worker') else f'worker-{random.randint(0, 1000000)}', 
+    api_id, api_hash)
        .start(bot_token=bot_token))
 
