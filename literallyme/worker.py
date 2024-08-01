@@ -130,7 +130,7 @@ async def main():
     await bot.connect()
     while True:
         try:
-            await process_a_random_pack()
+            await process_a_pack()
         except Exception:
             print(traceback.format_exc())
         await asyncio.sleep(1)
