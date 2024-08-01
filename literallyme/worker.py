@@ -3,6 +3,7 @@ import traceback
 import asyncio
 import sys
 import pynvml
+import os
 
 os.environ['worker'] = '1'
 
@@ -32,13 +33,13 @@ sticker_paths = ['stickers/0/popcorn.webm',
                  ]    
 
 
-WORKER_MEM = 7.9
+WORKER_MEM = 8
 pynvml.nvmlInit()
 handle = pynvml.nvmlDeviceGetHandleByIndex(0)
 mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
 memory_gb = mem_info.total / (1024 ** 3)
 pynvml.nvmlShutdown()
-n_workers = int(memory_gb // WORKER_MEM)
+n_workers = os.getenv('N_WORKERS') or int(memory_gb // WORKER_MEM)
 print(f"We'll use {n_workers} workers")
 
 

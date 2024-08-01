@@ -31,7 +31,7 @@ def suggest_execution_threads() -> int:
     return 8
 
 
-EXECUTION_THREADS = 11
+EXECUTION_THREADS = 10
 
 
 def get_face_analyser() -> Any:
