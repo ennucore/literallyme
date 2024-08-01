@@ -32,7 +32,7 @@ sticker_paths = ['stickers/0/popcorn.webm',
                  ]    
 
 
-WORKER_MEM = 6.5
+WORKER_MEM = 7.9
 pynvml.nvmlInit()
 handle = pynvml.nvmlDeviceGetHandleByIndex(0)
 mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
