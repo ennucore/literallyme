@@ -58,6 +58,7 @@ class StickerPack:
     documents: list[(int, int, bytes)] = field(default_factory=list)
     emojis: list[str] = field(default_factory=list)
     stages_timestamps: dict[str, int] = field(default_factory=dict)
+    worker_info: dict[str, Any] = field(default_factory=dict)
     _id: Any = None
 
     async def save_to_mongo(self):
@@ -92,10 +93,12 @@ class StickerPack:
         self.stages_timestamps[status] = int(time.time())
         await self.save_to_mongo()
 
-    async def add_docs(self, docs: list[(int, int, bytes)]):
+    async def add_docs(self, docs: list[(int, int, bytes)], worker_info: dict[str, Any] | None = None):
         self.documents.extend(docs)
         self.status = 'generated'
         self.stages_timestamps['generated'] = int(time.time())
+        if worker_info is not None:
+            self.worker_info = worker_info
         await self.save_to_mongo()
 
     @classmethod
