@@ -11,6 +11,7 @@ from bot import bot
 from db import StickerPack
 from utils import upload_file, process_sticker, lock_file, get_username
 from concurrent.futures import ProcessPoolExecutor
+from rich import print
 
 from swapper.swap import fully_process_video
 
@@ -114,7 +115,7 @@ async def process_a_pack(pack_id=None):
         pack = await StickerPack.from_mongo(pack_id)
     if pack is None:
         return
-    print('Processing pack', pack.pack_id)
+    print(f'[bold][red]Processing pack {pack.pack_id} [/red][/bold]')
     await pack.processing()
     docs = await get_videos(bot, pack)
     await pack.add_docs(docs)
