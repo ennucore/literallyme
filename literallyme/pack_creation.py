@@ -68,7 +68,7 @@ async def create_sticker_pack(bot, user_id, documents: list[(int, int, bytes)], 
         title=title or ('created in @' + bot_name),
         short_name=f"{name_suffix}_by_{bot_name}",
         stickers=stickers,
-        videos=True
+        # videos=True
     ))
 
     return sticker_set
