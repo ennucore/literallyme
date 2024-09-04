@@ -6,6 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 import os
 from utils import gen_pack_id
+from typing import AsyncGenerator
 
 load_dotenv()
 mongo = AsyncIOMotorClient(os.getenv('MONGO')).literalme
@@ -75,7 +76,17 @@ class StickerPack:
         if pack is None:
             return None
         return cls(**pack)
-
+    
+    @staticmethod
+    async def iter_packs(query: dict) -> AsyncGenerator[StickerPack, None]:
+        cursor = mongo.sticker_packs.find(query)
+        async for pack in cursor:
+            yield StickerPack(**pack)
+    
+    @staticmethod
+    async def count_packs(query: dict) -> int:
+        return await mongo.sticker_packs.count_documents(query)
+    
     async def processing(self):
         if self.status == 'processing':
             await self.set_status('retrying1')

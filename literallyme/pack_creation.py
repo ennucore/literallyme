@@ -21,7 +21,7 @@ async def create_sticker_pack(bot, user_id, documents: list[(int, int, bytes)], 
     bot_name = (await bot.get_me()).username
     # print(user_id, title, bot_name)
     # Create a new sticker pack
-    name_suffix = name_suffix or gen_pack_id(user_id)
+    name_suffix = (name_suffix or gen_pack_id(user_id)).replace('literally', 'literal')
 
     stickers = []
     emojis = ['🗿🍿🍫', 

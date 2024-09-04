@@ -4,8 +4,9 @@ from tqdm import tqdm
 import glob
 from typing import List
 import subprocess
+import tempfile
 
-TEMP_DIRECTORY = '/Data/temp'
+TEMP_DIRECTORY = 'stickers/temp'
 TEMP_VIDEO_FILE = 'temp.mp4'
 output_video_encoder = 'libx264'
 TEMP_FRAME_QUALITY, OUTPUT_VIDEO_QUALITY = 0, 35
@@ -99,3 +100,61 @@ def remove_frames(suffix: str) -> None:
 def get_temp_frame_paths(target_path: str) -> List[str]:
     temp_directory_path = get_temp_directory_path(target_path)
     return glob.glob((os.path.join(glob.escape(temp_directory_path), '*.' + 'png')))
+
+
+def compress_video(input_path: str, max_size: int) -> str:
+    output_path = tempfile.mktemp(suffix='.mp4')
+    target_bitrate = (max_size * 8) // 10  # Aim for 80% of max size, convert to bits
+
+    cmd = [
+        'ffmpeg',
+        '-i', input_path,
+        '-c:v', 'libx264',
+        '-crf', '23',
+        '-preset', 'medium',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-maxrate', f'{target_bitrate}k',
+        '-bufsize', f'{target_bitrate*2}k',
+        '-vf', 'scale=iw*min(1\,min(480/iw\,480/ih)):ih*min(1\,min(480/iw\,480/ih))',
+        '-y', output_path
+    ]
+
+    try:
+        subprocess.run(cmd, check=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error compressing video: {e}")
+        print(f"FFmpeg stderr: {e.stderr.decode()}")
+        raise
+
+    return output_path
+
+
+def get_video_format(input_path: str) -> str:
+    """
+    Get the video format from the input path using ffprobe.
+    
+    Args:
+        input_path (str): The path to the input video file.
+    
+    Returns:
+        str: The video format as reported by ffprobe.
+    """
+    print('input:', input_path)
+    cmd = [
+        'ffprobe',
+        '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=codec_name',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        input_path
+    ]
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        print(result.stdout)
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        print(f"Error getting video format: {e}")
+        print(f"ffprobe stderr: {e.stderr}")
+        return "unknown"
