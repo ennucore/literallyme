@@ -15,7 +15,10 @@ os.makedirs(TEMP_DIRECTORY, exist_ok=True)
 
 def conditional_download(download_directory_path: str, urls: List[str]) -> None:
     if not os.path.exists(download_directory_path):
-        os.makedirs(download_directory_path)
+        try:
+            os.makedirs(download_directory_path)
+        except Exception as e:
+            print(f"Error creating directory: {e}")
     for url in urls:
         download_file_path = os.path.join(download_directory_path, os.path.basename(url))
         if not os.path.exists(download_file_path):
