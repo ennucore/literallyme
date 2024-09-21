@@ -45,7 +45,7 @@ print(f"We'll use {n_workers} workers, since the total memory is {memory_gb} GB"
 machine_info = {
     'memory_gb': memory_gb,
     'n_workers': n_workers,
-    'gpu': pynvml.nvmlDeviceGetName(handle).decode('utf-8'),
+    'gpu': pynvml.nvmlDeviceGetName(handle),
     'username': get_username(),
     'worker_name': os.getenv('worker_name')
 }
