@@ -55,6 +55,15 @@ async def finish_pack(bot, user, pack: db.StickerPack):
     ][user.lang == 'ru'])
 
 
+async def finish_pack_by_id(bot, pack_id: str):
+    print('Finishing pack by id', pack_id)
+    pack = await db.StickerPack.from_mongo(pack_id)
+    print('Pack found', pack)
+    user = await db.User.from_mongo(pack.user_id)
+    print('User found', user)
+    await finish_pack(bot, user, pack)
+
+
 async def finish_packs(bot: TelegramClient):
     while True:
         pack = await db.StickerPack.random_generated_pack()

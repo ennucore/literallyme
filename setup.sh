@@ -6,4 +6,5 @@ pip install pipx
 pipx ensurepath
 pipx install poetry
 pipx run poetry install
+pipx run poetry add onnxruntime-gpu@^1.18.1 --source onnxruntime-cuda-12
 
