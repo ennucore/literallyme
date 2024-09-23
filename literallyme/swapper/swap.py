@@ -1,5 +1,6 @@
 import insightface
 from literallyme.swapper.utils import resolve_relative_path, conditional_download, extract_frames, get_temp_frame_paths, create_video, remove_frames
+from literallyme.utils import process_sticker
 import numpy
 from queue import Queue
 import threading
@@ -209,7 +210,7 @@ def fully_process_video(input_path: str, target_path: str, workdir: str = ''):
     print(vid)
     print(os.listdir(os.path.dirname(vid)))
     remove_frames(suffix)
-    return vid
+    return process_sticker(vid)
 
 
 if __name__ == '__main__':

@@ -75,6 +75,7 @@ class StickerPack:
         pack = await mongo.sticker_packs.find_one({'pack_id': pack_id})
         if pack is None:
             return None
+        pack['user_id'] = int(pack['user_id'])
         return cls(**pack)
     
     @staticmethod

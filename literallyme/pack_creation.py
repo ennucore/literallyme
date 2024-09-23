@@ -64,7 +64,7 @@ async def create_sticker_pack(bot, user_id, documents: list[(int, int, bytes)], 
     # ))
 
     sticker_set = await bot(functions.stickers.CreateStickerSetRequest(
-        user_id=user_id,
+        user_id=int(user_id),
         title=title or ('created in @' + bot_name),
         short_name=f"{name_suffix}_by_{bot_name}",
         stickers=stickers,
