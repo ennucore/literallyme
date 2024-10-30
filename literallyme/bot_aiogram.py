@@ -66,7 +66,7 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery)
     pack_id = pre_checkout_query.invoice_payload
     # set the status to "queued" and add {"paid": int(time.time())} to stages_timestamps
     pack = await db.StickerPack.from_mongo(pack_id)
-    pack.stages_timestamps.append({"paid": int(time.time())})
+    pack.stages_timestamps["paid"] = int(time.time())
     await pack.processing()
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
