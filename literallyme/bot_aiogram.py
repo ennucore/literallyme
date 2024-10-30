@@ -32,12 +32,15 @@ async def photo_handler(message: types.Message):
     user = await db.User.from_mongo(message.from_user.id, 
                                   lang=['en', 'ru'][message.from_user.language_code == 'ru'])
     
+    print(f'Received a photo from {message.from_user.id}')
     # Download photo sent by the user
     file = await bot.get_file(message.photo[-1].file_id)
     photo_data = await bot.download_file(file.file_path)
+    print(f'Downloaded the photo from {message.from_user.id}')
     
     if message.caption and 'stars' in message.caption.lower():
         pack = await user.new_pack(photo_data.read(), custom_status='awaiting_payment')
+        print(f'Created a new pack {pack.pack_id} in the db for {message.from_user.id}')
         
         # Create invoice for 100 stars
         prices = [types.LabeledPrice(label='Premium Pack', amount=100)] # 145 is 1 star in smallest units
@@ -61,13 +64,15 @@ async def photo_handler(message: types.Message):
 
 @dp.pre_checkout_query()
 async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
-    print('Received a pre-checkout query!')
+    print(f'Received a pre-checkout query! payload: {pre_checkout_query.invoice_payload}')
     user_id = pre_checkout_query.from_user.id
     pack_id = pre_checkout_query.invoice_payload
     # set the status to "queued" and add {"paid": int(time.time())} to stages_timestamps
     pack = await db.StickerPack.from_mongo(pack_id)
+    print(f'Received the pack {pre_checkout_query.invoice_payload} from mongo for the pre-checkout query {pre_checkout_query.id}')
     pack.stages_timestamps["paid"] = int(time.time())
-    await pack.processing()
+    await pack.set_status('queued')
+    print(f'Set the staus to queued, answering the pre-checkout query now')
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 
