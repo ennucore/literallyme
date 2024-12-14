@@ -7,19 +7,24 @@ main:
             - archiveUrl: ${args.archiveUrl}
             - send_notification: ${default(map.get(args, "send_notification"), false)}
             - error: null
-    - try_record_training:
-        call: http.post
-        args:
-            url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
-            body:
-                userId: ${userId}
-                operation: tryRecordTraining
-            auth:
-                type: OIDC
-        result: try_record_training_response
+    # - try_record_training:
+    #     call: http.post
+    #     args:
+    #         url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
+    #         body:
+    #             userId: ${userId}
+    #             operation: tryRecordTraining
+    #         auth:
+    #             type: OIDC
+    #     result: try_record_training_response
     - try_catch_training:
         try:
             steps:
+                - create_callback:
+                    call: events.create_callback_endpoint
+                    args:
+                        http_callback_method: "POST"
+                    result: callback_details
                 - start_training:
                     call: http.post
                     args:
@@ -30,21 +35,21 @@ main:
                         auth:
                             type: OIDC
                     result: start_training_response
-                - create_callback:
-                    call: events.create_callback_endpoint
-                    args:
-                        http_callback_method: "POST"
-                    result: callback_details
-                - check_training_status:
-                    call: http.post
-                    args:
-                        url: ${sys.get_env("CHECK_TRAINING_STATUS_FUNCTION_URL")}
-                        body:
-                            callbackUrl: ${callback_details.url}
-                            userId: "${userId}"
-                        auth:
-                            type: OIDC
-                    result: ignored_response
+                # - create_callback:
+                #     call: events.create_callback_endpoint
+                #     args:
+                #         http_callback_method: "POST"
+                #     result: callback_details
+                # - check_training_status:
+                #     call: http.post
+                #     args:
+                #         url: ${sys.get_env("CHECK_TRAINING_STATUS_FUNCTION_URL")}
+                #         body:
+                #             callbackUrl: ${callback_details.url}
+                #             userId: "${userId}"
+                #         auth:
+                #             type: OIDC
+                #     result: ignored_response
                 - await_callback:
                     call: events.await_callback
                     args:
@@ -65,40 +70,40 @@ main:
         except:
             as: e
             steps:
-                - refund_training:
-                    call: http.post
-                    args:
-                        url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
-                        body:
-                            userId: ${userId}
-                            operation: refundTraining
-                    auth:
-                        type: OIDC
+                # - refund_training:
+                #     call: http.post
+                #     args:
+                #         url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
+                #         body:
+                #             userId: ${userId}
+                #             operation: refundTraining
+                #     auth:
+                #         type: OIDC
                 - assign_error:
                     assign:
                         - error: ${e}
                         - status: -1
-        - check_send_notification:
-            switch:
-                - condition: ${send_notification}
-                  next: send_notification_message
-                next: check_error
-        - send_notification_message:
-            call: http.post
-            args:
-                url: ${sys.get_env("NOTIFICATIONS_FUNCTION_URL")}
-                body:
-                    userId: ${userId}
-                    type: "training"
-                    status: ${status}
-            auth:
-                type: OIDC
-        - check_error:
-            switch:
-                - condition: ${error != null}
-                  next: raise_again
-                next: return_result
-        - raise_again:
-            raise: ${error}
-        - return_result:
-            return: ${weightsUrl}
+    # - check_send_notification:
+    #     switch:
+    #         - condition: ${send_notification}
+    #           next: send_notification_message
+    #         next: check_error
+    # - send_notification_message:
+    #     call: http.post
+    #     args:
+    #         url: ${sys.get_env("NOTIFICATIONS_FUNCTION_URL")}
+    #         body:
+    #             userId: ${userId}
+    #             type: "training"
+    #             status: ${status}
+    #     auth:
+    #         type: OIDC
+    - check_error:
+        switch:
+            - condition: ${error != null}
+              next: raise_again
+        next: return_result
+    - raise_again:
+        raise: ${error}
+    - return_result:
+        return: ${weightsUrl}
