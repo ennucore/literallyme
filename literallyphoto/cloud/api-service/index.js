@@ -2,8 +2,8 @@
 
 const express = require('express');
 const { ExecutionsClient } = require('@google-cloud/workflows');
-// const { firestore } = require('./firebase');
-
+const { firestore } = require('./firebase');
+const { FieldValue } = require('@google-cloud/firestore');
 const TRAINING_WORKFLOW_NAME = 'workflow-training';
 const PROJECT_ID = 'literallyme-dev';
 const PORT = parseInt(process.env.PORT) || 8080;
@@ -29,12 +29,12 @@ app.post(`/start_training`, async (req, res) => {
     archiveUrl: archiveUrl,
   };
   console.log(`Training input: ${JSON.stringify(input)}`);
-  // TODO: Add writing to DB
-  // await firestore.collection('trainings').doc(userId).collection('targets').doc(targetId).set({
-  //   weightsUrl: '',
-  //   callbacks: [],
-  //   status: 'processing',
-  // });
+  await firestore.collection('trainings').doc(userId).collection('targets').doc(targetId).set({
+    weightsUrl: '',
+    callbacks: [],
+    status: 'processing',
+    created: FieldValue.serverTimestamp(),
+  });
   const workflow = executionsClient.workflowPath(PROJECT_ID, 'us-central1', TRAINING_WORKFLOW_NAME);
 
   const executionResponse = await executionsClient.createExecution({

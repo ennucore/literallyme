@@ -17,7 +17,7 @@ gcloud builds submit --tag us-central1-docker.pkg.dev/literallyme-dev/literallym
 ## Deploy
 
 ```
-gcloud run deploy api-service --image us-central1-docker.pkg.dev/literallyme-dev/literallyme-main-repo/api-service --allow-unauthenticated --service-account default-account@literallyme.iam.gserviceaccount.com
+gcloud run deploy api-service --image us-central1-docker.pkg.dev/literallyme-dev/literallyme-main-repo/api-service --allow-unauthenticated --service-account api-service-account@literallyme-dev.iam.gserviceaccount.com
 ```
 
 ## Deploy locally
@@ -34,3 +34,9 @@ docker run -p 9090:${PORT} -e PORT=${PORT} us-central1-docker.pkg.dev/literallym
 PORT=8080 && node index.js
 ```
 
+```
+gcloud projects get-iam-policy literallyme-dev \
+    --flatten="bindings[].members" \
+    --format="table(bindings.role)" \
+    --filter="bindings.members:literallyme-dev@appspot.gserviceaccount.com"
+```
