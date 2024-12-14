@@ -4,8 +4,8 @@ const auth = new GoogleAuth();
 
 functions.http('training-hook', async (req, res) => {
   const userId = req.query.userId;
+  const callbackUrl = atob(req.query.callbackUrl);
   // TODO: Get webhooks from DB
-  const callbackUrl = atob(req.body.callbackUrl);
   console.log(`Received training results userId: ${userId} callbackUrl: ${callbackUrl}`);
   console.log(`Received body: ${JSON.stringify(req.body)}`);
   let weightsUrl = req.body.output.weights;

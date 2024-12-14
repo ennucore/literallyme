@@ -1,13 +1,12 @@
 const functions = require('@google-cloud/functions-framework');
 const Replicate = require('replicate');
 
-const { GoogleAuth } = require('google-auth-library');
-const auth = new GoogleAuth();
-
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
 });
 
+// TODO: Create organization for literallyme
+const REPLICATE_ORGANIZATION_NAME = 'hellesgrind';
 const REPLICATE_MODEL_VERSION = 'e440909d3512c31646ee2e0c7d6f6f4923224863a6a10c494606e79fb5844497';
 
 // URL of training-hook function endpoint
@@ -15,7 +14,7 @@ const WEBHOOK_BASE_URL =
   'https://us-central1-literallyme-dev.cloudfunctions.net/training-hook-function';
 
 const REPLICATE_DEFAULT_TRAINING_SETTINGS = {
-  steps: 1250,
+  steps: 10,
   lora_rank: 16,
   optimizer: 'adamw8bit',
   batch_size: 2,
@@ -37,6 +36,7 @@ functions.http('training-start', async (req, res) => {
   console.log(`Callback URL: ${callbackUrl}`);
 
   const webhookUrl = getWebhookUrl(userId, callbackUrl);
+  console.log(`Generated webhook URL: ${webhookUrl}`);
   try {
     if (!platform || platform === 'replicate') {
       // TODO: Write callbacks to DB
@@ -61,16 +61,21 @@ async function startReplicate(webhookUrl, archiveUrl) {
 
   // Default to Replicate if no platform is specified or if platform is 'replicate'
   const modelName = crypto.randomUUID();
-  await replicate.models.create('literallyme', modelName, {
+  await replicate.models.create(REPLICATE_ORGANIZATION_NAME, modelName, {
     visibility: 'private',
     hardware: 'gpu-a100-large',
   });
-  await replicate.trainings.create('ostris', 'flux-dev-lora-trainer', REPLICATE_MODEL_VERSION, {
-    // You need to create a model on Replicate that will be the destination for the trained version.
-    destination: `literallyme/${modelName}`,
-    input: targetTrainingSettings,
-    webhook: webhookUrl,
-  });
+  response = await replicate.trainings.create(
+    'ostris',
+    'flux-dev-lora-trainer',
+    REPLICATE_MODEL_VERSION,
+    {
+      // You need to create a model on Replicate that will be the destination for the trained version.
+      destination: `${REPLICATE_ORGANIZATION_NAME}/${modelName}`,
+      input: targetTrainingSettings,
+      webhook: webhookUrl,
+    }
+  );
 }
 
 function getWebhookUrl(userId, callbackUrl) {
