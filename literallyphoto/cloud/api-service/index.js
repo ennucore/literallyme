@@ -26,6 +26,7 @@ app.post(`/start_training`, async (req, res) => {
   // TODO: Add checking for sufficient balance
   const input = {
     userId: userId,
+    targetId: targetId,
     archiveUrl: archiveUrl,
   };
   console.log(`Training input: ${JSON.stringify(input)}`);
@@ -43,7 +44,7 @@ app.post(`/start_training`, async (req, res) => {
       argument: JSON.stringify(input),
     },
   });
-  console.log(executionResponse);
+  console.log(`Started training workflow for userId: ${userId} targetId: ${targetId}`);
   res.status(200).json({ status: 'success' });
 });
 

@@ -27,15 +27,15 @@ const REPLICATE_DEFAULT_TRAINING_SETTINGS = {
 };
 
 functions.http('training-start', async (req, res) => {
-  const { archiveUrl, userId, callbackUrl, platform } = req.body;
-  if (!archiveUrl || !userId) {
-    res.status(400).send('Missing archiveUrl or userId');
+  const { archiveUrl, userId, targetId, callbackUrl, platform } = req.body;
+  if (!archiveUrl || !userId || !targetId) {
+    res.status(400).send('Missing archiveUrl, userId, or targetId');
     return;
   }
-  console.log(`Start training for userId: ${userId} archiveUrl: ${archiveUrl}`);
+  console.log(`Start training for userId: ${userId} targetId: ${targetId} archiveUrl: ${archiveUrl}`);
   console.log(`Callback URL: ${callbackUrl}`);
 
-  const webhookUrl = getWebhookUrl(userId, callbackUrl);
+  const webhookUrl = getWebhookUrl(userId, targetId, callbackUrl);
   console.log(`Generated webhook URL: ${webhookUrl}`);
   try {
     if (!platform || platform === 'replicate') {
@@ -78,10 +78,11 @@ async function startReplicate(webhookUrl, archiveUrl) {
   );
 }
 
-function getWebhookUrl(userId, callbackUrl) {
+function getWebhookUrl(userId, targetId, callbackUrl) {
   const encodedCallbackUrl = btoa(callbackUrl);
   const params = new URLSearchParams({
     userId,
+    targetId,
     callbackUrl: encodedCallbackUrl,
   });
   const webhookUrl = `${WEBHOOK_BASE_URL}/?${params.toString()}`;
