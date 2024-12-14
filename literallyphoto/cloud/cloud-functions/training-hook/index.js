@@ -7,6 +7,7 @@ functions.http('training-hook', async (req, res) => {
   // TODO: Get webhooks from DB
   const callbackUrl = atob(req.body.callbackUrl);
   console.log(`Received training results userId: ${userId} callbackUrl: ${callbackUrl}`);
+  console.log(`Received body: ${JSON.stringify(req.body)}`);
   let weightsUrl = req.body.output.weights;
   let status = req.body.status;
 
