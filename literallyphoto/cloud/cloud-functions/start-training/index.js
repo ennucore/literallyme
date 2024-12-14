@@ -1,3 +1,4 @@
+const functions = require('@google-cloud/functions-framework');
 const Replicate = require('replicate');
 
 const replicate = new Replicate({
@@ -7,7 +8,7 @@ const replicate = new Replicate({
 const REPLICATE_MODEL_VERSION = 'e440909d3512c31646ee2e0c7d6f6f4923224863a6a10c494606e79fb5844497';
 
 // URL of training-hook function endpoint
-const WEBHOOK_BASE_URL = 'https://us-central1-literallyme.cloudfunctions.net/training-hooks';
+const WEBHOOK_BASE_URL = 'https://us-central1-literallyme.cloudfunctions.net/training-hook';
 
 const REPLICATE_DEFAULT_TRAINING_SETTINGS = {
   steps: 1250,
@@ -22,17 +23,19 @@ const REPLICATE_DEFAULT_TRAINING_SETTINGS = {
   cache_latents_to_disk: true,
 };
 
-functions.http('startTraining', async (req, res) => {
-  const { archiveUrl, userId, platform } = req.body;
+functions.http('training-start', async (req, res) => {
+  const { archiveUrl, userId, callbackUrl, platform } = req.body;
   if (!archiveUrl || !userId) {
     res.status(400).send('Missing archiveUrl or userId');
     return;
   }
   console.log(`Start training for userId: ${userId} archiveUrl: ${archiveUrl}`);
 
+  const webhookUrl = getWebhookUrl(userId, callbackUrl);
   try {
     if (!platform || platform === 'replicate') {
-      await startReplicate(userId, archiveUrl);
+      // TODO: Write callbacks to DB
+      await startReplicate(webhookUrl, archiveUrl);
       res.status(200).send('Operation completed successfully');
     } else {
       // TODO: add other training platforms when ready
@@ -44,7 +47,7 @@ functions.http('startTraining', async (req, res) => {
   }
 });
 
-async function startReplicate(userId, archiveUrl) {
+async function startReplicate(webhookUrl, archiveUrl) {
   const targetTrainingSettings = {
     ...REPLICATE_DEFAULT_TRAINING_SETTINGS,
   };
@@ -57,7 +60,6 @@ async function startReplicate(userId, archiveUrl) {
     visibility: 'private',
     hardware: 'gpu-a100-large',
   });
-  const webhookUrl = getWebhookUrl(userId, targetId);
   await replicate.trainings.create('ostris', 'flux-dev-lora-trainer', REPLICATE_MODEL_VERSION, {
     // You need to create a model on Replicate that will be the destination for the trained version.
     destination: `literallyme/${modelName}`,
@@ -66,6 +68,13 @@ async function startReplicate(userId, archiveUrl) {
   });
 }
 
-function getWebhookUrl(userId) {
-  return `${WEBHOOK_BASE_URL}/?userId=${userId}`;
+function getWebhookUrl(userId, callbackUrl) {
+  const encodedCallbackUrl = btoa(callbackUrl);
+  const params = new URLSearchParams({
+    userId,
+    callbackUrl: encodedCallbackUrl,
+  });
+  const webhookUrl = `${WEBHOOK_BASE_URL}/?${params.toString()}`;
+  console.log(`Webhook URL: ${webhookUrl}`);
+  return webhookUrl;
 }
