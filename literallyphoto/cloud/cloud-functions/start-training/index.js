@@ -1,6 +1,9 @@
 const functions = require('@google-cloud/functions-framework');
 const Replicate = require('replicate');
 
+const { GoogleAuth } = require('google-auth-library');
+const auth = new GoogleAuth();
+
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
 });
@@ -31,13 +34,14 @@ functions.http('training-start', async (req, res) => {
     return;
   }
   console.log(`Start training for userId: ${userId} archiveUrl: ${archiveUrl}`);
+  console.log(`Callback URL: ${callbackUrl}`);
 
   const webhookUrl = getWebhookUrl(userId, callbackUrl);
   try {
     if (!platform || platform === 'replicate') {
       // TODO: Write callbacks to DB
       await startReplicate(webhookUrl, archiveUrl);
-      res.status(200).send('Operation completed successfully');
+      res.status(200).send('Training started successfully');
     } else {
       // TODO: add other training platforms when ready
       res.status(400).send('Unsupported platform');
