@@ -32,6 +32,7 @@ main:
                         body:
                             archiveUrl: ${archiveUrl}
                             userId: ${userId}
+                            callbackUrl: ${callback_details.url}
                         auth:
                             type: OIDC
                     result: start_training_response
@@ -56,6 +57,10 @@ main:
                         callback: ${callback_details}
                         timeout: 10800
                     result: callback_request
+                - log_callback_request:
+                    call: sys.log
+                    args:
+                        data: ${callback_request}
                 - handle_callback_status:
                     switch:
                         - condition: ${callback_request.http_request.body.status == "failed"}
