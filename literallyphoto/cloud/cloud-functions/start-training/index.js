@@ -8,7 +8,8 @@ const replicate = new Replicate({
 const REPLICATE_MODEL_VERSION = 'e440909d3512c31646ee2e0c7d6f6f4923224863a6a10c494606e79fb5844497';
 
 // URL of training-hook function endpoint
-const WEBHOOK_BASE_URL = 'https://us-central1-literallyme.cloudfunctions.net/training-hook';
+const WEBHOOK_BASE_URL =
+  'https://us-central1-literallyme-dev.cloudfunctions.net/training-hook-function';
 
 const REPLICATE_DEFAULT_TRAINING_SETTINGS = {
   steps: 1250,
