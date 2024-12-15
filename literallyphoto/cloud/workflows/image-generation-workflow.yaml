@@ -58,7 +58,7 @@ generate_images:
             - call_image_gen:
                 call: http.post
                 args:
-                    url: ${sys.get_env("IMAGE_GEN_SERVICE_URL")}
+                    url: ${sys.get_env("IMAGE_GEN_SERVICE_URL") + "/generate_images"}
                     body:
                         weightsUrl: ${weightsUrl}
                         userId: ${userId}

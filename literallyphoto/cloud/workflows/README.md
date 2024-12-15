@@ -4,7 +4,7 @@ Generation workflow:
 ```
 gcloud workflows deploy workflow-image-generation \
   --env-vars-file=image_generation_envs.yaml \
-  --source=generation-workflow.yaml \
+  --source=image-generation-workflow.yaml \
   --service-account=workflow-sa@literallyme-dev.iam.gserviceaccount.com
 ```
 

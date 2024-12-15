@@ -1,2 +1,2 @@
-IMAGE_GEN_SERVICE_URL: 
-BOOKKEEPER_SERVICE_URL: 
+IMAGE_GEN_SERVICE_URL: https://image-gen-service-923310519975.us-central1.run.app
+BOOKKEEPER_SERVICE_URL: https://bookkeeper-service-923310519975.us-central1.run.app
