@@ -4,6 +4,7 @@ const express = require('express');
 const { ExecutionsClient } = require('@google-cloud/workflows');
 const { firestore } = require('./firebase');
 const { FieldValue } = require('@google-cloud/firestore');
+const { hasBalanceForGeneration } = require('./balance');
 
 const TRAINING_WORKFLOW_NAME = 'workflow-training';
 const IMAGE_GENERATION_WORKFLOW_NAME = 'workflow-image-generation';
