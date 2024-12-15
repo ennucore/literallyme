@@ -35,7 +35,7 @@ app.post('/generate_images', async (req, res) => {
     req.body;
 
   console.log(
-    `Received image generation request for User ID: ${userId}, Target ID: ${targetId}, Template ID: ${templateId}, Generation ID: ${generationId}`,
+    `Received image generation request for User ID: ${userId}, Target ID: ${targetId}, Generation ID: ${generationId}`,
   );
 
   if (!weightsUrl) {
@@ -80,7 +80,6 @@ app.post('/generate_images', async (req, res) => {
           localFilePath,
           userId,
           targetId,
-          templateId,
           generationId,
         );
       }),
@@ -119,12 +118,11 @@ async function uploadToStorage(
   localFilePath,
   userId,
   targetId,
-  templateId,
   generationId,
 ) {
   const bucket = storage.bucket(BUCKET_NAME);
   const fileName = path.basename(localFilePath);
-  const destination = `${userId}/${targetId}/${templateId}/${generationId}/images/${fileName}`;
+  const destination = `${userId}/${targetId}/${generationId}/images/${fileName}`;
   const file = bucket.file(destination);
   await bucket.upload(localFilePath, { destination });
   console.log(`Image uploaded to GCS at ${destination}`);
