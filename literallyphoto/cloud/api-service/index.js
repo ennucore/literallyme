@@ -105,6 +105,7 @@ app.post(`/image_generation`, async (req, res) => {
       imagePrompt: imagePrompt,
       weightsUrl: weightsUrl,
       generationId: generationId,
+      docName: docName,
     };
     console.log(`Image generation input: ${JSON.stringify(input)}`);
     const workflow = executionsClient.workflowPath(

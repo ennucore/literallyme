@@ -21,7 +21,7 @@ main:
                     args:
                         url: ${bookKeeperUrl + "/record_images_completed"}
                         body:
-                            document_path: ${args.doc_name}
+                            document_path: ${args.docName}
                             images: ${images}
                         auth:
                             type: OIDC
