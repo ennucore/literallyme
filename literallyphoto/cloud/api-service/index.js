@@ -118,7 +118,7 @@ app.post(`/image_generation`, async (req, res) => {
       },
     });
     console.log(
-      `Started image generation workflow for userId: ${userId} targetId: ${targetId} templateId: ${templateId}`,
+      `Started image generation workflow for userId: ${userId} targetId: ${targetId} imagePrompt: ${imagePrompt}`,
     );
     res.status(200).json({ status: 'success' });
   } catch (error) {
