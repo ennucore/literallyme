@@ -16,7 +16,7 @@ const BUCKET_NAME = `${PROJECT_ID}_user_generations`;
 const DEFAULT_REPLICATE_OPTIONS = {
   aspect_ratio: '9:16',
   prompt_strength: 1.0,
-  num_outputs: 4,
+  num_outputs: 1,
   num_inference_steps: 35,
   guidance_scale: 3.5,
   lora_scale: 1,
@@ -76,12 +76,7 @@ app.post('/generate_images', async (req, res) => {
     console.log(`Downloaded ${localFiles.length} images`);
     const storageFiles = await Promise.all(
       localFiles.map(async (localFilePath) => {
-        return uploadToStorage(
-          localFilePath,
-          userId,
-          targetId,
-          generationId,
-        );
+        return uploadToStorage(localFilePath, userId, targetId, generationId);
       }),
     );
     console.log(`Uploaded ${storageFiles.length} images`);
@@ -114,12 +109,7 @@ async function downloadImage(imageUrl) {
   return localFilePath;
 }
 
-async function uploadToStorage(
-  localFilePath,
-  userId,
-  targetId,
-  generationId,
-) {
+async function uploadToStorage(localFilePath, userId, targetId, generationId) {
   const bucket = storage.bucket(BUCKET_NAME);
   const fileName = path.basename(localFilePath);
   const destination = `${userId}/${targetId}/${generationId}/images/${fileName}`;
