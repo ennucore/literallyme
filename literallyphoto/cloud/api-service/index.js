@@ -62,9 +62,9 @@ app.post(`/start_training`, async (req, res) => {
 });
 
 app.post(`/image_generation`, async (req, res) => {
-  const { userId, targetId, templateId } = req.body;
+  const { userId, targetId, imagePrompt } = req.body;
   console.log(
-    `Received request to generate photos userId ${userId} targetId ${targetId} templateId ${templateId}`,
+    `Received request to generate photos userId ${userId} targetId ${targetId} imagePrompt ${imagePrompt}`,
   );
   // TODO: Add checking for sufficient balance
 
@@ -91,7 +91,7 @@ app.post(`/image_generation`, async (req, res) => {
       .collection('generations')
       .add({
         images: [],
-        template_id: templateId,
+        image_prompt: imagePrompt,
         status: 'processing',
         created: FieldValue.serverTimestamp(),
       });
@@ -101,7 +101,7 @@ app.post(`/image_generation`, async (req, res) => {
     const input = {
       userId: userId,
       targetId: targetId,
-      templateId: templateId,
+      imagePrompt: imagePrompt,
       weightsUrl: weightsUrl,
     };
     console.log(`Image generation input: ${JSON.stringify(input)}`);

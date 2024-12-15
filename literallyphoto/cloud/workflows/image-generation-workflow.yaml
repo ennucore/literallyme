@@ -50,7 +50,7 @@ generate_images:
         assign:
             - userId: ${args.userId}
             - targetId: ${args.targetId}
-            - templateId: ${args.template.id}
+            - imagePrompt: ${args.imagePrompt}
             - weightsUrl: ${args.weightsUrl}
             - generationId: ${args.generationId}
     - gen_images:
@@ -60,9 +60,10 @@ generate_images:
                 args:
                     url: ${sys.get_env("IMAGE_GEN_SERVICE_URL")}
                     body:
-                        weightsUrl: ${weights_url}
+                        weightsUrl: ${weightsUrl}
                         userId: ${userId}
-                        templateId: ${templateId}
+                        targetId: ${targetId}
+                        imagePrompt: ${imagePrompt}
                         generationId: ${generationId}
                     auth:
                         type: OIDC
