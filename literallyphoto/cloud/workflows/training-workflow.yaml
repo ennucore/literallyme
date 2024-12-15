@@ -1,0 +1,66 @@
+main:
+  params: [args]
+  steps:
+    - init:
+        assign:
+            - userId: ${args.userId}
+            - archiveUrl: ${args.archiveUrl}
+            - targetId: ${args.targetId}
+            - error: null
+    - try_catch_training:
+        try:
+            steps:
+                - create_callback:
+                    call: events.create_callback_endpoint
+                    args:
+                        http_callback_method: "POST"
+                    result: callback_details
+                - start_training:
+                    call: http.post
+                    args:
+                        url: ${sys.get_env("TRAINING_START_FUNCTION_URL")}
+                        body:
+                            archiveUrl: ${archiveUrl}
+                            userId: ${userId}
+                            targetId: ${targetId}
+                            callbackUrl: ${callback_details.url}
+                        auth:
+                            type: OIDC
+                    result: start_training_response
+                - await_callback:
+                    call: events.await_callback
+                    args:
+                        callback: ${callback_details}
+                        timeout: 10800
+                    result: callback_request
+                - log_callback_request:
+                    call: sys.log
+                    args:
+                        data: ${callback_request}
+                - handle_callback_status:
+                    switch:
+                        - condition: ${callback_request.http_request.body.status == "failed"}
+                          next: raise_training_error
+                    next: assign_success
+                - raise_training_error:
+                    raise: "Training failed"
+                - assign_success:
+                    assign:
+                        - status: 1
+                        - weightsUrl: ${callback_request.http_request.body.weightsUrl}
+        except:
+            as: e
+            steps:
+                - assign_error:
+                    assign:
+                        - error: ${e}
+                        - status: -1
+    - check_error:
+        switch:
+            - condition: ${error != null}
+              next: raise_again
+        next: return_result
+    - raise_again:
+        raise: ${error}
+    - return_result:
+        return: ${weightsUrl}

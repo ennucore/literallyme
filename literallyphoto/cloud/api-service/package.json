@@ -1,0 +1,16 @@
+{
+  "name": "literallyphoto-api-service",
+  "version": "1.0.0-alpha01",
+  "description": "Server that provides API surface for literallyphoto.ai",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "literallyphoto.ai",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.0",
+    "@google-cloud/workflows": "^3.4.0",
+    "firebase-admin": "^12.0.0"
+  }
+}

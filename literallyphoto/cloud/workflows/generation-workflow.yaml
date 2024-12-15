@@ -1,0 +1,133 @@
+main:
+  params: [args]
+  steps:
+    - init:
+        assign:
+            - send_notification: ${default(map.get(args, "send_notification"), false)}
+            - send_notification_status: "success"
+            - error: null
+    - try_record_generation:
+        call: http.post
+        args:
+          url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
+          body:
+            userId: ${args.userId}
+            operation: tryRecordGeneration
+          auth:
+            type: OIDC
+        result: try_record_generation_response
+    - try_catch_error:
+        try:
+            steps:
+                - gen_images:
+                    call: generate_images
+                    args:
+                        args: ${args}
+                    result: gen_images_results
+                - assign_result:
+                    assign:
+                        - result: ${gen_images_results}
+                        - send_notification_status: "success"
+        except:
+            as: e
+            steps:
+                - refund_generation:
+                    call: http.post
+                    args:
+                      url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
+                      body:
+                        userId: ${args.userId}
+                        operation: refundGeneration
+                      auth:
+                        type: OIDC
+                - record_failure:
+                    call: firestore_put
+                    args:
+                        doc_name: ${args.doc_name}
+                        status: -1
+                - assign_error:
+                    assign:
+                        - error: ${e}
+                        - send_notification_status: "failed"
+    - check_send_notification:
+        switch:
+            - condition: ${send_notification}
+              next: send_notification_message
+        next: check_error
+    - send_notification_message:
+        call: http.post
+        args:
+            url: ${sys.get_env("NOTIFICATIONS_FUNCTION_URL")}
+            body:
+              userId: ${args.userId}
+              type: "generation"
+              status: ${send_notification_status}
+            auth:
+                type: OIDC
+    - check_error:
+        switch:
+            - condition: ${error != null}
+              next: raise_again
+        next: return_result
+    - raise_again:
+        raise: ${error}
+    - return_result:
+        return: ${result}
+
+
+generate_images:
+  params: [args]
+  steps:
+    - init:
+        assign:
+            - userId: ${args.userId}
+            - templateId: ${args.template.id}
+            - generationId: ${args.generationId}
+    - create_callback:
+        call: events.create_callback_endpoint
+        args:
+            http_callback_method: "POST"
+        result: callback_details
+    - check_training_status:
+        call: http.post
+        args:
+            url: ${sys.get_env("CHECK_TRAINING_STATUS_FUNCTION_URL")}
+            body:
+                callbackUrl: ${callback_details.url}
+                userId: ${userId}
+            auth:
+                type: OIDC
+        result: ignored_response
+    - await_callback:
+        call: events.await_callback
+        args:
+            callback: ${callback_details}
+            timeout: 10800
+        result: callback_request
+    - handle_callback_status:
+        switch:
+            - condition: ${callback_request.http_request.body.status == "failed"}
+              next: raise_training_failure
+        next: assign_weights_url
+    - raise_training_failure:
+        raise: "Training failed"
+    - assign_weights_url:
+        assign:
+            - weights_url: ${callback_request.http_request.body.weightsUrl}
+    - gen_images:
+        steps:
+            - call_image_gen:
+                call: http.post
+                args:
+                    url: ${sys.get_env("IMAGE_GEN_SERVICE_URL")}
+                    body:
+                        weightsUrl: ${weights_url}
+                        userId: ${userId}
+                        templateId: ${templateId}
+                        generationId: ${generationId}
+                    auth:
+                        type: OIDC
+                result: image_gen_response
+    - return:
+        return:
+            images: ${image_gen_response.body.result}

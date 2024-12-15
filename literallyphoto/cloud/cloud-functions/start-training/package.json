@@ -1,0 +1,15 @@
+{
+  "name": "literallyphoto-functions-start-training",
+  "version": "0.0.1",
+  "private": true,
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "replicate": "^0.33.0",
+    "@google-cloud/functions-framework": "3.4.2"
+  }
+}
