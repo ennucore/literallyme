@@ -13,7 +13,7 @@ app.use(express.json());
 
 app.listen(PORT);
 
-app.get('/record_images_completed', async (req, res) => {
+app.post('/record_images_completed', async (req, res) => {
   const { document_path, images } = req.body;
   console.log(`Received request to record images completed for ${document_path} images: ${JSON.stringify(images)}`);
   const generationDocRef = firestore.doc(document_path);
