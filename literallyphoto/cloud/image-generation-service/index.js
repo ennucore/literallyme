@@ -24,6 +24,8 @@ const DEFAULT_REPLICATE_OPTIONS = {
   output_quality: 100,
 };
 
+const storage = new Storage();
+
 const app = express();
 app.listen(PORT);
 app.use(express.json());
