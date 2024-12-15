@@ -97,8 +97,7 @@ app.post(`/image_generation`, async (req, res) => {
         created: FieldValue.serverTimestamp(),
       });
     const generationId = newGeneration.id;
-    const docName = `projects/${PROJECT_ID}/databases/generations-db/documents/image_generations/${userId}/${targetId}/generations/${generationId}`;
-
+    const docName = `image_generations/${userId}/targets/${targetId}/generations/${generationId}`;
     const input = {
       userId: userId,
       targetId: targetId,
