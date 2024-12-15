@@ -1,0 +1,75 @@
+main:
+  params: [args]
+  steps:
+    - init:
+        assign:
+            - bookKeeperUrl: ${sys.get_env("BOOKKEEPER_SERVICE_URL")}
+            - error: null
+    - try_catch_error:
+        try:
+            steps:
+                - gen_images:
+                    call: generate_images
+                    args:
+                        args: ${args}
+                    result: gen_images_results
+                - assign_result:
+                    assign:
+                        - images: ${gen_images_results.images}
+                - record_success:
+                    call: http.post
+                    args:
+                        url: ${bookKeeperUrl + "/record_images_completed"}
+                        body:
+                            document_path: ${args.doc_name}
+                            images: ${images}
+                        auth:
+                            type: OIDC
+        except:
+            as: e
+            steps:
+                - assign_error:
+                    assign:
+                        - error: ${e}
+    - check_error:
+        switch:
+            - condition: ${error != null}
+              next: raise_again
+        next: return_result
+    - raise_again:
+        raise: ${error}
+    - return_result:
+        return:
+            images: ${images}
+
+
+generate_images:
+  params: [args]
+  steps:
+    - init:
+        assign:
+            - userId: ${args.userId}
+            - targetId: ${args.targetId}
+            - templateId: ${args.template.id}
+            - weightsUrl: ${args.weightsUrl}
+            - generationId: ${args.generationId}
+    - gen_images:
+        steps:
+            - call_image_gen:
+                call: http.post
+                args:
+                    url: ${sys.get_env("IMAGE_GEN_SERVICE_URL")}
+                    body:
+                        weightsUrl: ${weights_url}
+                        userId: ${userId}
+                        templateId: ${templateId}
+                        generationId: ${generationId}
+                    auth:
+                        type: OIDC
+                result: image_gen_response
+            - assign_result:
+                assign:
+                    - images: ${image_gen_response.body.result}
+    - return:
+        return:
+            images: ${images}
