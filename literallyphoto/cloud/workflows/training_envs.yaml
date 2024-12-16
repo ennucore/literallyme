@@ -1,1 +1,2 @@
 TRAINING_START_FUNCTION_URL: https://us-central1-literallyme-dev.cloudfunctions.net/training-start-function
+BOOKKEEPER_SERVICE_URL: https://bookkeeper-service-923310519975.us-central1.run.app

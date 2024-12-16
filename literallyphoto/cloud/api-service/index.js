@@ -32,13 +32,8 @@ app.use(express.json());
 app.post(`/start_training`, async (req, res) => {
   const { userId, targetId } = req.body;
   console.log(
-    `Received request to start training userId ${userId} targetId ${targetId} archiveUrl ${archiveUrl}`,
+    `Received request to start training userId ${userId} targetId ${targetId}`,
   );
-  const input = {
-    userId: userId,
-    targetId: targetId,
-    archiveUrl: archiveUrl,
-  };
   if (!(await hasBalanceForTraining(userId))) {
     console.log(`Insufficient balance for training userId ${userId}`);
     res.status(402).send('Insufficient balance for training');
@@ -59,19 +54,26 @@ app.post(`/start_training`, async (req, res) => {
   await file.makePublic();
   const archiveUrl = file.publicUrl();
   console.log(`Archive URL: ${archiveUrl}`);
-
-  console.log(`Training input: ${JSON.stringify(input)}`);
-  await firestore
+  const trainingDocRef = firestore
     .collection('trainings')
     .doc(userId)
     .collection('targets')
-    .doc(targetId)
-    .set({
-      weightsUrl: '',
-      callbacks: [],
-      status: 'processing',
-      created: FieldValue.serverTimestamp(),
-    });
+    .doc(targetId);
+  await trainingDocRef.set({
+    weightsUrl: '',
+    status: 'processing',
+    created: FieldValue.serverTimestamp(),
+  });
+  const docName = `trainings/${userId}/targets/${targetId}`;
+  console.log(`Created training doc for userId ${userId} targetId ${targetId}`);
+
+  const input = {
+    userId: userId,
+    targetId: targetId,
+    archiveUrl: archiveUrl,
+    docName: docName,
+  };
+  console.log(`Training input: ${JSON.stringify(input)}`);
   const workflow = executionsClient.workflowPath(
     PROJECT_ID,
     'us-central1',
@@ -194,7 +196,6 @@ app.post('/upload_archive_url', async (req, res) => {
     .doc(targetId)
     .set({
       weightsUrl: '',
-      callbacks: [],
       status: 'uninitialized',
       created: FieldValue.serverTimestamp(),
     });
