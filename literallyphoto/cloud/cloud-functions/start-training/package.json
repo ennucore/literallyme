@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "replicate": "^0.33.0",
+    "@google-cloud/storage": "^7.13.0",
     "@google-cloud/functions-framework": "3.4.2"
   }
 }
