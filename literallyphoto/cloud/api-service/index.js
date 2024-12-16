@@ -179,7 +179,7 @@ async function getWeightsUrl(userId, targetId) {
   return weightsUrl;
 }
 
-app.get('/upload_archive_url', async (req, res) => {
+app.post('/upload_archive_url', async (req, res) => {
   let { userId, targetId } = req.body;
   if (!targetId) {
     console.log(`targetId not provided, generating random targetId`);

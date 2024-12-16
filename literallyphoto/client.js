@@ -5,7 +5,8 @@ const fs = require('fs');
 const BASE_URL = 'https://api-service-923310519975.us-central1.run.app';
 const TEST_ARCHIVE_URL =
   'https://storage.googleapis.com/literallyme-dev-test-photos/user_photos/aleksei_test/raw.zip';
-const startTraining = async () => {
+
+async function startTraining() {
   // const token = fs.readFileSync('./dev/.literallyme_token', 'utf8');
 
   const response = await axios.post(
@@ -25,7 +26,7 @@ const startTraining = async () => {
   console.log('Training started:', response.data);
 };
 
-const generateImages = async () => {
+async function generateImages() {
   const response = await axios.post(
     `${BASE_URL}/image_generation`,
     {
@@ -37,4 +38,15 @@ const generateImages = async () => {
   console.log('Image generation started:', response.data);
 };
 
-generateImages();
+async function getUploadUrl() {
+  const response = await axios.post(
+    `${BASE_URL}/upload_archive_url`,
+    {
+      userId: 'alex',
+      targetId: 'literallyalex2',
+    }
+  );
+  console.log('Upload URL:', response.data);
+}
+
+getUploadUrl();
