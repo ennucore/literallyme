@@ -25,5 +25,16 @@ const startTraining = async () => {
   console.log('Training started:', response.data);
 };
 
+const generateImages = async () => {
+  const response = await axios.post(
+    `${BASE_URL}/image_generation`,
+    {
+      userId: 'alex',
+      targetId: 'literallyalex',
+      imagePrompt: 'a cinematic portrait of a TOK in central park holding a book and reading it',
+    }
+  );
+  console.log('Image generation started:', response.data);
+};
 
-startTraining();
+generateImages();
