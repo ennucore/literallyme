@@ -31,7 +31,7 @@ app.listen(PORT);
 app.use(express.json());
 
 app.post('/generate_images', async (req, res) => {
-  let { userId, targetId, weightsUrl, imagePrompt, generationId, model } =
+  let { userId, targetId, generationId, weightsUrl, imagePrompt, model } =
     req.body;
 
   console.log(
@@ -66,23 +66,40 @@ app.post('/generate_images', async (req, res) => {
   );
 
   try {
+    // Generate images
     const output = await generateImagesWithRetry(generateFunction);
     console.log(`Generated ${output.length} images`);
+
+    // Download images
     const localFiles = await Promise.all(
       output.map(async (imageUrl) => {
         return downloadImage(imageUrl.trim());
       }),
     );
     console.log(`Downloaded ${localFiles.length} images`);
+
+    // Upload images to storage
     const storageFiles = await Promise.all(
       localFiles.map(async (localFilePath) => {
         return uploadToStorage(localFilePath, userId, targetId, generationId);
       }),
     );
-    console.log(`Uploaded ${storageFiles.length} images`);
+    console.log(`Uploaded ${storageFiles.length} images to storage`);
+
     const storageUrls = storageFiles.map((file) => file.cloudStorageURI);
     const result = { success: true, result: storageUrls };
     console.log(`Generated images ${storageUrls}`);
+
+    // Clean up local files
+    localFiles.forEach((filePath) => {
+      try {
+        fs.unlinkSync(filePath);
+        console.log(`Cleaned up local file: ${filePath}`);
+      } catch (err) {
+        console.error(`Failed to clean up local file: ${filePath}`, err);
+      }
+    });
+
     res.status(200).json(result);
   } catch (error) {
     console.error('Failed to generate images after multiple attempts:', error);
