@@ -49,10 +49,7 @@ app.post(`/start_training`, async (req, res) => {
     res.status(404).send('No photos found');
     return;
   }
-  // TODO: Use storageURI and send signedURL to fal/replicate
-  // const archiveUrl = file.cloudStorageURI;
-  await file.makePublic();
-  const archiveUrl = file.publicUrl();
+  const archiveUrl = file.cloudStorageURI;
   console.log(`Archive URL: ${archiveUrl}`);
   const trainingDocRef = firestore
     .collection('trainings')
