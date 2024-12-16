@@ -1,8 +1,14 @@
 // TODO: Implement balance checking
-async function hasBalanceForGeneration(userId) {
+async function hasBalanceForImageGeneration(userId) {
+  return true;
+}
+
+async function hasBalanceForTraining(userId) {
   return true;
 }
 
 module.exports = {
-  hasBalanceForGeneration,
+  hasBalanceForImageGeneration,
+  hasBalanceForTraining,
 };
+
