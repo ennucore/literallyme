@@ -40,10 +40,12 @@ class User:
             user.pop('_id')
             return cls(**user)
 
-    async def new_pack(self, photo: bytes) -> StickerPack:
+    async def new_pack(self, photo: bytes, custom_status: str | None = None) -> StickerPack:
         pack_id = gen_pack_id(self.user_id)
         self.packs_created.append((pack_id, int(time.time())))
         pack = StickerPack(pack_id=pack_id, user_id=self.user_id, input_photo=photo)
+        if custom_status is not None:
+            pack.status = custom_status
         await pack.save_to_mongo()
         await self.save_to_mongo()
         return pack
