@@ -5,13 +5,13 @@ import { ModelCard } from './model/ModelCard';
 import { NewModelCard } from './model/NewModelCard';
 import { ModelCreator } from './model/ModelCreator';
 import { GenerationInterface } from './generation/GenerationInterface';
-import { mockApi } from '../api/mock';
+import { listModels, downloadModel, generateImage, listPacks, createModel, createModelInvoiceUrl } from '../api/api';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from './ui/Button';
 import { PageTransition } from './layout/PageTransition';
 import { GradientText } from './ui/GradientText';
-import { telegram } from '../services/telegram';
 import { useTelegramUser } from '../hooks/useTelegramUser';
+import { getWebApp } from '../utils/telegram';
 
 export function AppContent() {
   const user = useTelegramUser();
@@ -23,8 +23,8 @@ export function AppContent() {
   useEffect(() => {
     const loadInitialData = async () => {
       const [modelsList, packsList] = await Promise.all([
-        mockApi.listModels(),
-        mockApi.listPacks()
+        listModels(),
+        listPacks()
       ]);
       setModels(modelsList);
       setPacks(packsList);
@@ -32,13 +32,22 @@ export function AppContent() {
     loadInitialData();
   }, []);
 
+
+
   const handleCreateModel = async (name: string, photos: File[]) => {
-    const { invoiceUrl } = await mockApi.createModel(name, photos);
-    telegram.openInvoice(invoiceUrl);
+
+    const handleInvoiceCallback = async (status: "paid" | "cancelled" | "failed" | "pending"): Promise<void> => {
+      switch (status) {
+        case 'paid':
+          await createModel(name, photos);
+          break;
+      }
+    };
+    getWebApp().openInvoice(createModelInvoiceUrl, handleInvoiceCallback);
   };
 
   const handleDownloadModel = async (modelId: string) => {
-    const { downloadUrl } = await mockApi.downloadModel(modelId);
+    const { downloadUrl } = await downloadModel(modelId);
     window.open(downloadUrl, '_blank');
   };
 
@@ -78,7 +87,7 @@ export function AppContent() {
                 <GenerationInterface
                   model={selectedModel}
                   packs={packs}
-                  onGenerate={(prompt) => mockApi.generateImage(selectedModel.id, prompt)}
+                  onGenerate={(prompt) => generateImage(selectedModel.id, prompt)}
                 />
               </div>
             </PageTransition>

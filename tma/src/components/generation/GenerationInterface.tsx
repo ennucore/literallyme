@@ -1,43 +1,56 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Model, Pack, GenerationResult } from '../../types';
+import { Model, Pack, GenerationResult, GenerationIdResult } from '../../types';
 import { Send, Wand2 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
 import { GradientText } from '../ui/GradientText';
-import { PackCard } from './PackCard';
-import { GeneratedImage } from './GeneratedImage';
-import { GenerationPrompt } from './GenerationPrompt';
+import { getGeneration } from '../../api/api';
 
 interface GenerationInterfaceProps {
   model: Model;
   packs: Pack[];
-  onGenerate: (prompt: string) => Promise<GenerationResult>;
+  onGenerate: (prompt: string) => Promise<GenerationIdResult>;
 }
 
 export function GenerationInterface({ model, packs, onGenerate }: GenerationInterfaceProps) {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<GenerationResult[]>([]);
+  const [result, setResult] = useState<GenerationResult | null>(null);
 
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      const result = await onGenerate(prompt);
-      setResults(prev => [result, ...prev]);
-      setPrompt('');
-    } finally {
-      setLoading(false);
-    }
-  };
+      const { id } = await onGenerate(prompt);
+      
+      // Start polling for results
+      const pollInterval = setInterval(async () => {
+        const result = await getGeneration(id);
+        
+        if (result === "failed") {
+          clearInterval(pollInterval);
+          setLoading(false);
+          // Handle error state here
+        } else if (result !== "pending") {
+          clearInterval(pollInterval);
+          setResult(result);
+          setLoading(false);
+        }
+      }, 1000);
 
-  const handlePackGenerate = async (packPrompt: string) => {
-    setLoading(true);
-    try {
-      const result = await onGenerate(packPrompt);
-      setResults(prev => [result, ...prev]);
-    } finally {
+      // Cleanup interval after 5 minutes (optional timeout)
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (loading) {
+          setLoading(false);
+          // Handle timeout error here
+        }
+      }, 5 * 60 * 1000);
+
+    } catch {
       setLoading(false);
+      // Handle error here
     }
   };
 
@@ -47,35 +60,68 @@ export function GenerationInterface({ model, packs, onGenerate }: GenerationInte
         <h2 className="text-2xl font-bold mb-2">
           Generate with <GradientText>{model.name}</GradientText>
         </h2>
-        <p className="text-gray-300 mb-6">Enter a prompt or choose a pack below to create amazing images</p>
+        <p className="text-gray-400 mb-4">Enter a prompt or choose a pack below to create amazing images</p>
         
-        <GenerationPrompt
-          value={prompt}
-          onChange={setPrompt}
-          onGenerate={handleGenerate}
-          loading={loading}
-        />
+        <div className="flex gap-3">
+          <Input
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Describe your perfect photo..."
+            className="flex-1 glass-effect !border-white/20 !text-white placeholder:text-gray-400"
+          />
+          <Button
+            onClick={handleGenerate}
+            disabled={loading || !prompt}
+            loading={loading}
+            className="bg-white/10 hover:bg-white/20 backdrop-blur-sm"
+            icon={<Wand2 className="w-4 h-4" />}
+          >
+            Generate
+          </Button>
+        </div>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {packs.map((pack) => (
-          <PackCard
-            key={pack.id}
-            pack={pack}
-            onGenerate={() => handlePackGenerate(pack.prompts[0])}
-          />
+          <Card key={pack.id} className="p-6">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="font-semibold text-white">{pack.name}</h3>
+                <p className="text-sm text-gray-400">{pack.description}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onGenerate(pack.prompts[0])}
+                icon={<Send className="w-4 h-4" />}
+                className="hover:bg-white/10"
+              >
+                Generate
+              </Button>
+            </div>
+            <div className="text-xs text-gray-500">
+              {pack.prompts.slice(0, 2).join(' • ')}
+              {pack.prompts.length > 2 && ' • ...'}
+            </div>
+          </Card>
         ))}
       </div>
 
-      {results.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-white">Generated Images</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {results.map((result, index) => (
-              <GeneratedImage key={index} result={result} />
-            ))}
-          </div>
-        </div>
+      {result && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring" }}
+        >
+          <Card className="overflow-hidden" hover={false} images={result.urls}>
+            <div className="p-4">
+              <p className="text-sm text-gray-300 font-medium">{result.prompt}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Generated on {result.timestamp.toLocaleString()}
+              </p>
+            </div>
+          </Card>
+        </motion.div>
       )}
     </div>
   );

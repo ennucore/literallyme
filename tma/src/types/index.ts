@@ -10,10 +10,15 @@ export interface Pack {
   name: string;
   description: string;
   prompts: string[];
+  thumbnail: string;
 }
 
 export interface GenerationResult {
-  url: string;
+  urls: string[];
   prompt: string;
   timestamp: Date;
+}
+
+export interface GenerationIdResult {
+  id: string;
 }
