@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Model, Pack, GenerationResult, GenerationIdResult } from '../../types';
-import { Send, Wand2 } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
 import { GradientText } from '../ui/GradientText';
 import { getGeneration, getGenerations } from '../../api/api';
 import { jelly } from 'ldrs';
+import { getWebApp } from '../../utils/telegram';
+import { GenerationPrompt } from './GenerationPrompt';
 
 
 jelly.register();
@@ -77,25 +78,14 @@ export function GenerationInterface({ model, packs, onGenerate }: GenerationInte
         <h2 className="text-2xl font-bold mb-2">
           Generate with <GradientText>{model.name}</GradientText>
         </h2>
-        <p className="text-gray-400 mb-4">Enter a prompt or choose a pack below to create amazing images</p>
+        <p className="text-gray-400 mb-6">Enter a prompt or choose a pack below to create amazing images</p>
         
-        <div className="flex gap-3">
-          <Input
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe your perfect photo..."
-            className="flex-1 glass-effect !border-white/20 !text-white placeholder:text-gray-400"
-          />
-          <Button
-            onClick={handleGenerate}
-            disabled={loading || !prompt}
-            loading={loading}
-            className="bg-white/10 hover:bg-white/20 backdrop-blur-sm"
-            icon={<Wand2 className="w-4 h-4" />}
-          >
-            Generate
-          </Button>
-        </div>
+        <GenerationPrompt
+          value={prompt}
+          onChange={setPrompt}
+          onGenerate={handleGenerate}
+          loading={loading}
+        />
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -133,7 +123,23 @@ export function GenerationInterface({ model, packs, onGenerate }: GenerationInte
             transition={{ type: "spring" }}
           >
             {'urls' in gen ? (
-              <Card className="overflow-hidden" hover={false} images={gen.urls}>
+              <Card 
+                className="overflow-hidden" 
+                hover={false} 
+                images={gen.urls}
+                onShare={() => {
+                  // Share first image to story
+                  if (gen.urls && gen.urls.length > 0) {
+                    getWebApp().shareToStory(gen.urls[0], {
+                      text: 'This is literally me!',
+                      widget_link: {
+                        url: 'https://t.me/literallymebot',
+                        name: 'Literally Me'
+                      }
+                    });
+                  }
+                }}
+              >
                 <div className="p-4">
                   <p className="text-sm text-gray-300 font-medium">{gen.prompt}</p>
                   <p className="text-xs text-gray-500 mt-1">
