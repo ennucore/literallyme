@@ -203,6 +203,11 @@ app.post('/upload_archive_url', async (req, res) => {
   });
 });
 
+app.post('/test_auth', validateTelegramAuth, (req, res) => {
+  const uid = req.uid;
+  console.log(`Authenticated user with uid ${uid}`);
+});
+
 async function generateV4UploadSignedUrl(userId, targetId) {
   const fileName = `${userId}/${targetId}/${USER_PHOTOS_ARCHIVE_NAME}`;
   const options = {
@@ -220,3 +225,4 @@ async function generateV4UploadSignedUrl(userId, targetId) {
 
   return url;
 }
+
