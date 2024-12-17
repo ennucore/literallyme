@@ -3,6 +3,7 @@ export interface Model {
   name: string;
   thumbnail: string;
   created: Date;
+  is_training: boolean;
 }
 
 export interface Pack {

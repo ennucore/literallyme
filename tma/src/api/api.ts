@@ -2,7 +2,9 @@ import { Model, Pack, GenerationResult, GenerationIdResult } from '../types';
 import axios from 'axios';
 import { getWebApp } from '../utils/telegram';
 import JSZip from 'jszip';
+import { mockApi } from './mockApi';
 const API_URL = import.meta.env.VITE_API_URL || 'https://api-service-923310519975.us-central1.run.app';
+const MOCK = true;   // import.meta.env.VITE_MOCK === 'true';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -61,6 +63,8 @@ api.interceptors.response.use(
 );
 
 export const auth = async () => {
+  if (MOCK) return mockApi.auth();
+  
   try {
     const webApp = getWebApp();
     const storage = getStorage();
@@ -133,11 +137,13 @@ export const createModel = async (name: string, photos: File[]) => {
 };
 
 export const checkTrainingStatus = async (target_id: string) => {
+  if (MOCK) return mockApi.checkTrainingStatus(target_id);
   const response = await api.get(`/check_training_status?target_id=${target_id}`);
   return response.data;
 };
 
 export const listModels = async (): Promise<Model[]> => {
+  if (MOCK) return mockApi.listModels();
   const response = await api.get('/list_models');
   return response.data;
 };
@@ -167,6 +173,8 @@ export const downloadModel = async (target_id: string) => {
 };
 
 export const generateImage = async (model_id: string, prompt: string): Promise<GenerationIdResult> => {
+  if (MOCK) return mockApi.generateImage(model_id, prompt);
+
   const response = await api.post('/generate_image', {
     target_id: model_id,
     prompt: prompt,
@@ -176,6 +184,15 @@ export const generateImage = async (model_id: string, prompt: string): Promise<G
 };
 
 export const getGeneration = async (id: string): Promise<GenerationResult | "pending" | "failed"> => {
+  if (MOCK) return mockApi.getGeneration(id);
+
   const response = await api.get(`/get_generation?id=${id}`);
+  return response.data;
+};
+
+export const getGenerations = async (): Promise<(GenerationResult | GenerationIdResult)[]> => {
+  if (MOCK) return mockApi.getGenerations();
+
+  const response = await api.get('/get_generations');
   return response.data;
 };

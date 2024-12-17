@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Model, Pack, GenerationResult, GenerationIdResult } from '../../types';
 import { Send, Wand2 } from 'lucide-react';
@@ -6,7 +6,12 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
 import { GradientText } from '../ui/GradientText';
-import { getGeneration } from '../../api/api';
+import { getGeneration, getGenerations } from '../../api/api';
+import { jelly } from 'ldrs';
+
+
+jelly.register();
+
 
 interface GenerationInterfaceProps {
   model: Model;
@@ -17,7 +22,19 @@ interface GenerationInterfaceProps {
 export function GenerationInterface({ model, packs, onGenerate }: GenerationInterfaceProps) {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<GenerationResult | null>(null);
+  const [allGenerations, setAllGenerations] = useState<(GenerationResult | GenerationIdResult)[]>([]);
+
+  useEffect(() => {
+    const loadGenerations = async () => {
+      const generations = await getGenerations();
+      setAllGenerations(generations);
+    };
+    loadGenerations();
+    
+    // Poll for updates every 5 seconds
+    const interval = setInterval(loadGenerations, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -34,7 +51,7 @@ export function GenerationInterface({ model, packs, onGenerate }: GenerationInte
           // Handle error state here
         } else if (result !== "pending") {
           clearInterval(pollInterval);
-          setResult(result);
+          setAllGenerations(prev => [...prev, result]);
           setLoading(false);
         }
       }, 1000);
@@ -107,22 +124,36 @@ export function GenerationInterface({ model, packs, onGenerate }: GenerationInte
         ))}
       </div>
 
-      {result && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring" }}
-        >
-          <Card className="overflow-hidden" hover={false} images={result.urls}>
-            <div className="p-4">
-              <p className="text-sm text-gray-300 font-medium">{result.prompt}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                Generated on {result.timestamp.toLocaleString()}
-              </p>
-            </div>
-          </Card>
-        </motion.div>
-      )}
+      <div className="space-y-4">
+        {allGenerations.map((gen, index) => (
+          <motion.div
+            key={('id' in gen) ? gen.id : index}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring" }}
+          >
+            {'urls' in gen ? (
+              <Card className="overflow-hidden" hover={false} images={gen.urls}>
+                <div className="p-4">
+                  <p className="text-sm text-gray-300 font-medium">{gen.prompt}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Generated on {gen.timestamp.toLocaleString()}
+                  </p>
+                </div>
+              </Card>
+            ) : (
+              <Card className="p-6 flex items-center justify-center">
+                <l-jelly
+                  size="40"
+                  speed="0.9"
+                  color="white"
+                ></l-jelly>
+                <span className="ml-3 text-gray-400">Generation in progress...</span>
+              </Card>
+            )}
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }

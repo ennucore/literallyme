@@ -4,6 +4,9 @@ import { Model } from '../../types';
 import { Download, Sparkles } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { helix } from 'ldrs';
+
+helix.register();
 
 interface ModelCardProps {
   model: Model;
@@ -13,7 +16,10 @@ interface ModelCardProps {
 
 export function ModelCard({ model, onSelect, onDownload }: ModelCardProps) {
   return (
-    <Card className="relative overflow-hidden cursor-pointer group" onClick={onSelect}>
+    <Card 
+      className={`relative overflow-hidden ${model.is_training ? 'cursor-not-allowed' : 'cursor-pointer group'}`} 
+      onClick={() => !model.is_training && onSelect()}
+    >
       <motion.div
         className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/70 to-transparent"
         initial={{ opacity: 0.6 }}
@@ -32,6 +38,7 @@ export function ModelCard({ model, onSelect, onDownload }: ModelCardProps) {
         <div className="flex justify-between items-start">
           <h3 className="text-lg font-semibold leading-tight text-white drop-shadow-lg">
             {model.name}
+            {model.is_training && <span className="text-sm text-blue-400 ml-2">(Training...)</span>}
           </h3>
           <Button
             variant="ghost"
@@ -52,13 +59,23 @@ export function ModelCard({ model, onSelect, onDownload }: ModelCardProps) {
             Created {model.created.toLocaleDateString()}
           </p>
           
-          <Button
-            className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
-            onClick={onSelect}
-            icon={<Sparkles className="w-4 h-4" />}
-          >
-            Generate Images
-          </Button>
+          {model.is_training ? (
+            <div className="flex items-center justify-center p-4">
+              <l-helix
+                size="45"
+                speed="2.5"
+                color="white"
+              ></l-helix>
+            </div>
+          ) : (
+            <Button
+              className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+              onClick={onSelect}
+              icon={<Sparkles className="w-4 h-4" />}
+            >
+              Generate Images
+            </Button>
+          )}
         </div>
       </div>
     </Card>
