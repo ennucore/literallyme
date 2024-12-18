@@ -79,13 +79,7 @@ export const auth = async () => {
     if (!webApp.initData) {
       throw new Error('No init data available');
     }
-
-    const response = await api.post('/app/auth', 
-      new TextEncoder().encode(getWebApp().initData), {
-        headers: {
-        'Content-Type': 'application/json',
-      }
-    });
+    const response = await api.post(`/authenticate?${getWebApp().initData}`);
     console.log(response.data);
     console.log(response.data?.token);
 
@@ -126,7 +120,6 @@ export const createModel = async (name: string, photos: File[]) => {
 
   // Start training process
   await api.post('/start_training', {
-    user_id: getWebApp().initDataUnsafe?.user?.id.toString(),
     target_id: target_id,
   });
 
@@ -167,6 +160,7 @@ export const listPacks = async (): Promise<Pack[]> => {
   ];
 };
 
+// TODO: Remove
 export const downloadModel = async (target_id: string) => {
   const response = await api.get(`/download_model?target_id=${target_id}`);
   return response.data;
