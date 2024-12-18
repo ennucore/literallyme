@@ -9,6 +9,8 @@ const {
   hasBalanceForImageGeneration,
   hasBalanceForTraining,
 } = require('./balance');
+const { authenticateUser } = require('./middleware');
+const cors = require('cors');
 
 const TRAINING_WORKFLOW_NAME = 'workflow-training';
 const IMAGE_GENERATION_WORKFLOW_NAME = 'workflow-image-generation';
@@ -22,15 +24,16 @@ const storage = new Storage();
 const executionsClient = new ExecutionsClient();
 
 const app = express();
+app.use(cors());
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 app.use(express.raw({ type: 'application/zip', limit: '1Gb' }));
 app.use(express.json());
 
-// TODO: Add auth
-app.post(`/start_training`, async (req, res) => {
-  const { userId, targetId } = req.body;
+app.post(`/start_training`, authenticateUser, async (req, res) => {
+  const { userId } = req.user.id;
+  const { targetId } = req.body;
   console.log(
     `Received request to start training userId ${userId} targetId ${targetId}`,
   );
@@ -89,8 +92,9 @@ app.post(`/start_training`, async (req, res) => {
   res.status(200).json({ status: 'success' });
 });
 
-app.post(`/image_generation`, async (req, res) => {
-  const { userId, targetId, imagePrompt } = req.body;
+app.post(`/image_generation`, authenticateUser, async (req, res) => {
+  const { userId } = req.user.id;
+  const { targetId, imagePrompt } = req.body;
   console.log(
     `Received request to generate photos userId ${userId} targetId ${targetId} imagePrompt ${imagePrompt}`,
   );
@@ -178,8 +182,9 @@ async function getWeightsUrl(userId, targetId) {
   return weightsUrl;
 }
 
-app.post('/upload_archive_url', async (req, res) => {
-  let { userId, targetId } = req.body;
+app.post('/upload_archive_url', authenticateUser, async (req, res) => {
+  const { userId } = req.user.id;
+  let { targetId } = req.body;
   if (!targetId) {
     console.log(`targetId not provided, generating random targetId`);
     targetId = crypto.randomUUID();
@@ -203,11 +208,6 @@ app.post('/upload_archive_url', async (req, res) => {
   });
 });
 
-app.post('/test_auth', validateTelegramAuth, (req, res) => {
-  const uid = req.uid;
-  console.log(`Authenticated user with uid ${uid}`);
-});
-
 async function generateV4UploadSignedUrl(userId, targetId) {
   const fileName = `${userId}/${targetId}/${USER_PHOTOS_ARCHIVE_NAME}`;
   const options = {
@@ -225,4 +225,3 @@ async function generateV4UploadSignedUrl(userId, targetId) {
 
   return url;
 }
-
