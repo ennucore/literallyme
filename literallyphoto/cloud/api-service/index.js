@@ -5,13 +5,13 @@ const { ExecutionsClient } = require('@google-cloud/workflows');
 const { firestore } = require('./firebase');
 const { FieldValue } = require('@google-cloud/firestore');
 const { Storage } = require('@google-cloud/storage');
+const crypto = require('crypto');
 const {
   hasBalanceForImageGeneration,
   hasBalanceForTraining,
 } = require('./balance');
 const { authenticateUser } = require('./middleware');
 const cors = require('cors');
-
 const TRAINING_WORKFLOW_NAME = 'workflow-training';
 const IMAGE_GENERATION_WORKFLOW_NAME = 'workflow-image-generation';
 const PROJECT_ID = 'literallyme-dev';
@@ -19,12 +19,14 @@ const PORT = parseInt(process.env.PORT) || 8080;
 
 const USER_PHOTOS_BUCKET_NAME = `gs://${PROJECT_ID}_user_photos`;
 const USER_PHOTOS_ARCHIVE_NAME = 'user_photos.zip';
+const authRoutes = require('./authRoutes');
 
 const storage = new Storage();
 const executionsClient = new ExecutionsClient();
 
 const app = express();
 app.use(cors());
+app.use(authRoutes);
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
@@ -32,7 +34,7 @@ app.use(express.raw({ type: 'application/zip', limit: '1Gb' }));
 app.use(express.json());
 
 app.post(`/start_training`, authenticateUser, async (req, res) => {
-  const { userId } = req.user.id;
+  const userId = req.uid;
   const { targetId } = req.body;
   console.log(
     `Received request to start training userId ${userId} targetId ${targetId}`,
@@ -93,7 +95,7 @@ app.post(`/start_training`, authenticateUser, async (req, res) => {
 });
 
 app.post(`/image_generation`, authenticateUser, async (req, res) => {
-  const { userId } = req.user.id;
+  const userId = req.uid;
   const { targetId, imagePrompt } = req.body;
   console.log(
     `Received request to generate photos userId ${userId} targetId ${targetId} imagePrompt ${imagePrompt}`,
@@ -183,7 +185,7 @@ async function getWeightsUrl(userId, targetId) {
 }
 
 app.post('/upload_archive_url', authenticateUser, async (req, res) => {
-  const { userId } = req.user.id;
+  const userId = req.uid;
   let { targetId } = req.body;
   if (!targetId) {
     console.log(`targetId not provided, generating random targetId`);
