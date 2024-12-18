@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "host": "vite --host",
+    "preview": "vite preview --host"
   },
   "dependencies": {
     "@twa-dev/types": "^8.0.1",
