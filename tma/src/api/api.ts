@@ -99,7 +99,7 @@ export const createModelInvoiceUrl = 'https://t.me/$cTk0qFsyCUs5EAAAP07dMEZzjEY'
 
 export const createModel = async (name: string, photos: File[]) => {
   // make a request with the api to "/upload_archive_url" with {userId: userId.toString()}
-  const { upload_url, target_id } = (await api.post('/upload_archive_url', { userId: getWebApp().initDataUnsafe?.user?.id.toString(), name })).data;
+  const { upload_url, target_id } = (await api.post('/upload_archive_url', { targetName: name })).data;
   // Create zip archive of photos
   const zip = new JSZip();
   for (let i = 0; i < photos.length; i++) {
