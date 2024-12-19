@@ -12,6 +12,7 @@ const {
 } = require('./balance');
 const { authenticateUser } = require('./middleware');
 const cors = require('cors');
+
 const TRAINING_WORKFLOW_NAME = 'workflow-training';
 const IMAGE_GENERATION_WORKFLOW_NAME = 'workflow-image-generation';
 const PROJECT_ID = 'literallyme-dev';
@@ -117,13 +118,22 @@ app.post(`/image_generation`, authenticateUser, async (req, res) => {
   console.log(`Retrieved weightsUrl: ${weightsUrl}`);
 
   try {
-    const generationsDocRef = firestore
+    const targetDocRef = firestore
       .collection('image_generations')
       .doc(userId)
       .collection('targets')
       .doc(targetId);
+    const targetDoc = await targetDocRef.get();
+    if (!targetDoc.exists) {
+      await targetDocRef.set({
+        created: FieldValue.serverTimestamp(),
+      });
+      console.log(
+        `Created target document for userId ${userId} targetId ${targetId}`,
+      );
+    }
 
-    const newGeneration = await generationsDocRef
+    const newGeneration = await targetDocRef
       .collection('generations')
       .add({
         images: [],
@@ -134,6 +144,7 @@ app.post(`/image_generation`, authenticateUser, async (req, res) => {
 
     const generationId = newGeneration.id;
     const docName = `image_generations/${userId}/targets/${targetId}/generations/${generationId}`;
+    console.log(`Created generation document for userId ${userId} targetId ${targetId} generationId ${generationId}`);
     const input = {
       userId: userId,
       targetId: targetId,
@@ -168,46 +179,94 @@ app.post(`/image_generation`, authenticateUser, async (req, res) => {
   }
 });
 
-async function getWeightsUrl(userId, targetId) {
-  const weightsDocRef = firestore
-    .collection('trainings')
-    .doc(userId)
-    .collection('targets')
-    .doc(targetId);
-  const weightsDoc = await weightsDocRef.get();
-  let weightsUrl = '';
-  if (weightsDoc.exists) {
-    if (weightsDoc.data().weightsUrl !== '') {
-      weightsUrl = weightsDoc.data().weightsUrl;
-    }
-  }
-  return weightsUrl;
-}
-
 app.post('/upload_archive_url', authenticateUser, async (req, res) => {
   const userId = req.uid;
-  let { targetId } = req.body;
-  if (!targetId) {
-    console.log(`targetId not provided, generating random targetId`);
-    targetId = crypto.randomUUID();
-  }
+  let { targetName } = req.body;
+  targetId = crypto.randomUUID();
   const url = await generateV4UploadSignedUrl(userId, targetId);
   console.log(`upload_archive_url ${url}}`);
-  await firestore
-    .collection('trainings')
-    .doc(userId)
-    .collection('targets')
-    .doc(targetId)
-    .set({
-      weightsUrl: '',
-      status: 'uninitialized',
+  const userDocRef = firestore.collection('trainings').doc(userId);
+  const userDoc = await userDocRef.get();
+  if (!userDoc.exists) {
+    console.log(`Creating a new parent document for user ${userId}`);
+    await userDocRef.set({
       created: FieldValue.serverTimestamp(),
     });
-  console.log(`created target ${targetId} for user ${userId}`);
+  }
+  await userDocRef.collection('targets').doc(targetId).set({
+    weightsUrl: '',
+    targetName,
+    status: 'processing',
+    created: FieldValue.serverTimestamp(),
+  });
+  console.log(`Created target ${targetId} for user ${userId}`);
   res.status(200).json({
     upload_url: url,
     target_id: targetId,
   });
+});
+
+app.get('/get_generations', authenticateUser, async (req, res) => {
+  const userId = req.uid;
+  console.log(`Retrieving generations for user ${userId}`);
+  const targetsSnapshot = await firestore
+    .collection('image_generations')
+    .doc(userId)
+    .collection('targets')
+    .get();
+
+  const results = [];
+
+  // Iterate over each target document
+  for (const targetDoc of targetsSnapshot.docs) {
+    const targetId = targetDoc.id;
+    console.log(`Retrieving generations for target ${targetId}`);
+    const generationsSnapshot = await firestore
+      .collection('image_generations')
+      .doc(userId)
+      .collection('targets')
+      .doc(targetId)
+      .collection('generations')
+      .get();
+    for (const generationDoc of generationsSnapshot.docs) {
+      const generationId = generationDoc.id;
+      const generationData = generationDoc.data();
+      results.push({
+        targetId,
+        generationId,
+        ...generationData,
+      });
+    }
+  }
+  console.log(`Retrieved generations for user ${userId}: ${results.length}`);
+  res.status(200).json(results);
+});
+
+app.get('/get_targets', authenticateUser, async (req, res) => {
+  const userId = req.uid;
+  console.log(`Retrieving targets for user ${userId}`);
+  const targets = await firestore
+    .collection('trainings')
+    .doc(userId)
+    .collection('targets')
+    .get();
+  const data = [];
+  for (const target of targets.docs) {
+    data.push({
+      targetId: target.id,
+      ...target.data(),
+    });
+  }
+  console.log(`Retrieved targets for user ${userId}: ${JSON.stringify(data)}`);
+  res.status(200).json(data);
+});
+
+app.post('/generation_status', authenticateUser, async (req, res) => {
+  pass;
+});
+
+app.post('/training_status', authenticateUser, async (req, res) => {
+  pass;
 });
 
 async function generateV4UploadSignedUrl(userId, targetId) {
@@ -226,4 +285,20 @@ async function generateV4UploadSignedUrl(userId, targetId) {
     .getSignedUrl(options);
 
   return url;
+}
+
+async function getWeightsUrl(userId, targetId) {
+  const weightsDocRef = firestore
+    .collection('trainings')
+    .doc(userId)
+    .collection('targets')
+    .doc(targetId);
+  const weightsDoc = await weightsDocRef.get();
+  let weightsUrl = '';
+  if (weightsDoc.exists) {
+    if (weightsDoc.data().weightsUrl !== '') {
+      weightsUrl = weightsDoc.data().weightsUrl;
+    }
+  }
+  return weightsUrl;
 }

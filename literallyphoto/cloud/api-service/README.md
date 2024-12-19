@@ -6,6 +6,30 @@ Main entrypoint of service that handles `training` and `generate_photo` requests
 - Build: `npm install`
 - Run locally: `node index.js`. It will be served at http://localhost:8080
 
+
+## Setup envs
+
+```
+export JWT_SECRET=random_string
+export TELEGRAM_BOT_TOKEN=random_string
+export GOOGLE_APPLICATION_CREDENTIALS=path/to/your/credentials.json # from firebase console
+```
+
+For local development, you can also set up firebase access locally:
+```
+const firebase = require('firebase-admin');
+const { applicationDefault } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
+
+firebase.initializeApp({
+  credential: applicationDefault(),
+  databaseURL: 'https://generations-db.firebaseio.com',
+});
+const firestore = getFirestore('generations-db');
+
+module.exports = { firebase, firestore };
+```
+
 ## Build and deploy
 ```
 gcloud builds submit --tag us-central1-docker.pkg.dev/literallyme-dev/literallyme-main-repo/api-service &&
