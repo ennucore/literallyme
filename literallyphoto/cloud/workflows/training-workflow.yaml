@@ -58,7 +58,7 @@ main:
                         userId: ${userId}
                         targetId: ${targetId}
                         weightsUrl: ${callback_request.http_request.body.weightsUrl}
-                        imagePrompt: "A cinematic portrait photo of a TOK white background"
+                        imagePrompt: "A portrait photo of a TOK man white background"
                       auth:
                         type: OIDC
                     result: image_gen_response
