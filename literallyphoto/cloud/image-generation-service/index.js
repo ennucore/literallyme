@@ -70,6 +70,12 @@ app.post('/generate_images', async (req, res) => {
     const output = await generateImagesWithRetry(generateFunction);
     console.log(`Generated ${output.length} images`);
 
+    if (output.length === 0) {
+      // If no images were generated, respond with failure
+      res.status(200).json({ images: [], status: 'failed' });
+      return;
+    }
+
     // Download images
     const localFiles = await Promise.all(
       output.map(async (imageUrl) => {
@@ -87,7 +93,7 @@ app.post('/generate_images', async (req, res) => {
     console.log(`Uploaded ${storageFiles.length} images to storage`);
 
     const storageUrls = storageFiles.map((file) => file.cloudStorageURI);
-    const result = { success: true, result: storageUrls };
+    const result = { images: storageUrls, status: 'completed' };
     console.log(`Generated images ${storageUrls}`);
 
     // Clean up local files
@@ -103,9 +109,7 @@ app.post('/generate_images', async (req, res) => {
     res.status(200).json(result);
   } catch (error) {
     console.error('Failed to generate images after multiple attempts:', error);
-    res
-      .status(500)
-      .json({ error: 'Failed to generate images after multiple attempts.' });
+    res.status(200).json({ images: [], status: 'failed' });
   }
 });
 
@@ -180,8 +184,6 @@ async function generateImagesWithRetry(
     console.log(`Successfully achieved ${targetRunsCount} successful runs.`);
     return totalOutputs;
   } else {
-    throw new Error(
-      `Failed to achieve ${targetRunsCount} successful runs before reaching ${maxFailedAttempts} failed attempts.`,
-    );
+    return [];
   }
 }

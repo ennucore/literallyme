@@ -2,3 +2,6 @@
 /bot.session
 /bot_session.session
 /.env
+
+# Python
+*.DS_Store

@@ -6,6 +6,7 @@ const router = express.Router();
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
+router.use(express.json());
 router.post('/authenticate', async (req, res) => {
   const authData = req.query; // Telegram sends data as query parameters
 
@@ -48,6 +49,15 @@ router.post('/authenticate', async (req, res) => {
     console.error('Error during authentication:', error);
     res.status(400).send('Bad Request');
   }
+});
+
+router.post('/mock_auth', async (req, res) => {
+  const token = jwt.sign({ uid: req.body.userId }, JWT_SECRET, {
+    expiresIn: '24h',
+  });
+  console.log('req.body', JSON.stringify(req.body));
+  console.log('token', token);
+  res.status(200).json({ token: token });
 });
 
 module.exports = router;
