@@ -152,7 +152,22 @@ async function topUpBalance() {
   console.log('Top up response:', response.data);  
 }
 
-generateImages();
+async function getBalance() {
+  const token = (
+    await axios.post(`${BASE_URL}/mock_auth`, {
+      userId: USER_ID,
+    })
+  ).data.token;
+  const balance = await axios.get(`${BASE_URL}/get_balance`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  console.log('Balance:', balance.data.balance);
+}
+
+getBalance();
+// generateImages();
 
 // startTraining();
 // topUpBalance();
