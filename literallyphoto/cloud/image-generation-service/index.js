@@ -105,7 +105,7 @@ app.post('/generate_images', async (req, res) => {
         console.error(`Failed to clean up local file: ${filePath}`, err);
       }
     });
-
+    console.log(`Sending result: ${JSON.stringify(result)}`);
     res.status(200).json(result);
   } catch (error) {
     console.error('Failed to generate images after multiple attempts:', error);

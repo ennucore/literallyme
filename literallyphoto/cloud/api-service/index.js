@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const {
   hasBalanceForImageGeneration,
   hasBalanceForTraining,
+  getBalance,
 } = require('./balance');
 const { authenticateUser } = require('./middleware');
 const cors = require('cors');
@@ -275,6 +276,12 @@ app.get('/get_targets', authenticateUser, async (req, res) => {
   }
   console.log(`Retrieved targets for user ${userId}: ${data.length}`);
   res.status(200).json(data);
+});
+
+app.get('/get_balance', authenticateUser, async (req, res) => {
+  const userId = req.uid;
+  const balance = await getBalance(userId);
+  res.status(200).json({ balance });
 });
 
 app.post('/generation_status', authenticateUser, async (req, res) => {
