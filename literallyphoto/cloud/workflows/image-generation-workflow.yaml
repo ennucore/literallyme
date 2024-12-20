@@ -12,6 +12,16 @@ main:
     - try_catch_image_generation:
         try:
             steps:
+                - try_record_image_generation:
+                    call: http.post
+                    args:
+                      url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
+                      body:
+                        userId: ${userId}
+                        operation: tryRecordImageGeneration
+                      auth:
+                        type: OIDC
+                    result: try_record_image_generation_response
                 - gen_images:
                     call: http.post
                     args:
@@ -29,7 +39,7 @@ main:
                     switch:
                         - condition: ${image_gen_response.body.status == "failed"}
                           next: raise_image_gen_error
-                    next: record_images_completed
+                    next: assign_completed
                 - raise_image_gen_error:
                     raise: "Image generation failed"
                 - assign_completed:
@@ -41,7 +51,7 @@ main:
                     args:
                         url: ${sys.get_env("BOOKKEEPER_SERVICE_URL") + "/record_images_completed"}
                         body:
-                            document_path: ${args.docName}
+                            document_path: ${docName}
                             images: ${images}
                             status: ${status}
                         auth:
@@ -49,6 +59,17 @@ main:
         except:
             as: e
             steps:
+                # todo: handle failed refund
+                - refund_generation:
+                    call: http.post
+                    args:
+                      url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
+                      body:
+                        userId: ${userId}
+                        operation: refundImageGeneration
+                      auth:
+                        type: OIDC
+                    result: refund_image_generation_response
                 - assign_failed:
                     assign:
                         - images: []

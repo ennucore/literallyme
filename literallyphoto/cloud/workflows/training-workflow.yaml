@@ -10,6 +10,16 @@ main:
     - try_catch_training:
         try:
             steps:
+                - try_record_training:
+                    call: http.post
+                    args:
+                      url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
+                      body:
+                        userId: ${userId}
+                        operation: tryRecordTraining
+                      auth:
+                        type: OIDC
+                    result: try_record_training_response
                 - create_callback:
                     call: events.create_callback_endpoint
                     args:
@@ -57,6 +67,16 @@ main:
         except:
             as: e
             steps:
+                - refund_training:
+                    call: http.post
+                    args:
+                      url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
+                      body:
+                        userId: ${userId}
+                        operation: refundTraining
+                      auth:
+                        type: OIDC
+                    result: refund_training_response
                 - assign_failed:
                     assign:
                         - status: "failed"
