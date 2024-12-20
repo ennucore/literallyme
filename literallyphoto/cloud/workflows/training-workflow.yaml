@@ -50,10 +50,21 @@ main:
                     next: assign_completed
                 - raise_training_error:
                     raise: "Training failed"
+                - generate_thumbnail:
+                    call: http.post
+                    args:
+                      url: ${sys.get_env("IMAGE_GEN_SERVICE_URL")}
+                      body:
+                        userId: ${userId}
+                        targetId: ${targetId}
+                        weightsUrl: ${callback_request.http_request.body.weightsUrl}
+                        imagePrompt: "A cinematic portrait photo of a TOK white background"
+                    result: image_gen_response
                 - assign_completed:
                     assign:
                         - status: ${callback_request.http_request.body.status}
                         - weightsUrl: ${callback_request.http_request.body.weightsUrl}
+                        - thumbnailUrl: ${image_gen_response.http_request.body.images}
                 - record_training_completed:
                     call: http.post
                     args:
@@ -61,6 +72,7 @@ main:
                         body:
                             document_path: ${docName}
                             weightsUrl: ${weightsUrl}
+                            thumbnailUrl: ${thumbnailUrl}
                             status: ${status}
                         auth:
                             type: OIDC
@@ -81,6 +93,7 @@ main:
                     assign:
                         - status: "failed"
                         - weightsUrl: ""
+                        - thumbnailUrl: []
                 - record_training_failed:
                     call: http.post
                     args:
@@ -88,6 +101,7 @@ main:
                         body:
                             document_path: ${docName}
                             weightsUrl: ${weightsUrl}
+                            thumbnailUrl: ${thumbnailUrl}
                             status: ${status}
                         auth:
                             type: OIDC

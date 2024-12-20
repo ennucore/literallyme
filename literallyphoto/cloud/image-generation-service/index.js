@@ -11,7 +11,7 @@ const PROJECT_ID = process.env.PROJECT_ID || 'literallyme-dev';
 const DEFAULT_REPLICATE_MODEL =
   'lucataco/flux-dev-lora:091495765fa5ef2725a175a57b276ec30dc9d39c22d30410f2ede68a3eab66b3';
 
-const BUCKET_NAME = `${PROJECT_ID}_user_generations`;
+const BUCKET_NAME = `${PROJECT_ID}_image_generations`;
 
 const DEFAULT_REPLICATE_OPTIONS = {
   aspect_ratio: '9:16',
@@ -35,7 +35,7 @@ app.post('/generate_images', async (req, res) => {
     req.body;
 
   console.log(
-    `Received image generation request for User ID: ${userId}, Target ID: ${targetId}, Generation ID: ${generationId}`,
+    `Received image generation request for User ID: ${userId} prompt: ${imagePrompt}`,
   );
 
   if (!weightsUrl) {
@@ -87,7 +87,7 @@ app.post('/generate_images', async (req, res) => {
     // Upload images to storage
     const storageFiles = await Promise.all(
       localFiles.map(async (localFilePath) => {
-        return uploadToStorage(localFilePath, userId, targetId, generationId);
+        return uploadToStorage(localFilePath);
       }),
     );
     console.log(`Uploaded ${storageFiles.length} images to storage`);
@@ -130,10 +130,9 @@ async function downloadImage(imageUrl) {
   return localFilePath;
 }
 
-async function uploadToStorage(localFilePath, userId, targetId, generationId) {
+async function uploadToStorage(localFilePath) {
   const bucket = storage.bucket(BUCKET_NAME);
-  const fileName = path.basename(localFilePath);
-  const destination = `${userId}/${targetId}/${generationId}/images/${fileName}`;
+  const destination = path.basename(localFilePath);
   const file = bucket.file(destination);
   await bucket.upload(localFilePath, { destination });
   console.log(`Image uploaded to GCS at ${destination}`);
