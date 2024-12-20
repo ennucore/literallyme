@@ -7,7 +7,6 @@ main:
             - archiveUrl: ${args.archiveUrl}
             - targetId: ${args.targetId}
             - docName: ${args.docName}
-            - error: null
     - try_catch_training:
         try:
             steps:
@@ -34,20 +33,16 @@ main:
                         callback: ${callback_details}
                         timeout: 10800
                     result: callback_request
-                - log_callback_request:
-                    call: sys.log
-                    args:
-                        data: ${callback_request}
-                - handle_callback_status:
+                - handle_training_status:
                     switch:
                         - condition: ${callback_request.http_request.body.status == "failed"}
                           next: raise_training_error
-                    next: assign_result
+                    next: assign_completed
                 - raise_training_error:
                     raise: "Training failed"
-                - assign_result:
+                - assign_completed:
                     assign:
-                        - status: 1
+                        - status: ${callback_request.http_request.body.status}
                         - weightsUrl: ${callback_request.http_request.body.weightsUrl}
                 - record_training_completed:
                     call: http.post
@@ -56,21 +51,27 @@ main:
                         body:
                             document_path: ${docName}
                             weightsUrl: ${weightsUrl}
+                            status: ${status}
                         auth:
                             type: OIDC
         except:
             as: e
             steps:
-                - assign_error:
+                - assign_failed:
                     assign:
-                        - error: ${e}
-                        - status: -1
-    - check_error:
-        switch:
-            - condition: ${error != null}
-              next: raise_again
-        next: return_result
-    - raise_again:
-        raise: ${error}
+                        - status: "failed"
+                        - weightsUrl: ""
+                - record_training_failed:
+                    call: http.post
+                    args:
+                        url: ${sys.get_env("BOOKKEEPER_SERVICE_URL") + "/record_training_completed"}
+                        body:
+                            document_path: ${docName}
+                            weightsUrl: ${weightsUrl}
+                            status: ${status}
+                        auth:
+                            type: OIDC
     - return_result:
-        return: ${weightsUrl}
+        return:
+            weightsUrl: ${weightsUrl}
+            status: ${status}

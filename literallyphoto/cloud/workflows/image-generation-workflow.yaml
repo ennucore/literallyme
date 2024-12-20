@@ -9,8 +9,6 @@ main:
             - weightsUrl: ${args.weightsUrl}
             - generationId: ${args.generationId}
             - docName: ${args.docName}
-            - bookKeeperUrl: ${sys.get_env("BOOKKEEPER_SERVICE_URL")}
-            - error: null
     - try_catch_image_generation:
         try:
             steps:
@@ -23,35 +21,49 @@ main:
                             userId: ${userId}
                             targetId: ${targetId}
                             imagePrompt: ${imagePrompt}
-                          generationId: ${generationId}
+                            generationId: ${generationId}
                         auth:
                             type: OIDC
                     result: image_gen_response
-                - assign_result:
+                - handle_image_gen_status:
+                    switch:
+                        - condition: ${image_gen_response.body.status == "failed"}
+                          next: raise_image_gen_error
+                    next: record_images_completed
+                - raise_image_gen_error:
+                    raise: "Image generation failed"
+                - assign_completed:
                     assign:
-                        - images: ${image_gen_response.body.result}
-                - record_success:
+                        - images: ${image_gen_response.body.images}
+                        - status: ${image_gen_response.body.status}
+                - record_images_completed:
                     call: http.post
                     args:
-                        url: ${bookKeeperUrl + "/record_images_completed"}
+                        url: ${sys.get_env("BOOKKEEPER_SERVICE_URL") + "/record_images_completed"}
                         body:
                             document_path: ${args.docName}
                             images: ${images}
+                            status: ${status}
                         auth:
                             type: OIDC
         except:
             as: e
             steps:
-                - assign_error:
+                - assign_failed:
                     assign:
-                        - error: ${e}
-    - check_error:
-        switch:
-            - condition: ${error != null}
-              next: raise_again
-        next: return_result
-    - raise_again:
-        raise: ${error}
+                        - images: []
+                        - status: "failed"
+                - record_images_failed:
+                    call: http.post
+                    args:
+                        url: ${sys.get_env("BOOKKEEPER_SERVICE_URL") + "/record_images_completed"}
+                        body:
+                            document_path: ${args.docName}
+                            images: ${images}
+                            status: ${status}
+                        auth:
+                            type: OIDC
     - return_result:
         return:
             images: ${images}
+            status: ${status}
