@@ -47,24 +47,26 @@ main:
                     switch:
                         - condition: ${callback_request.http_request.body.status == "failed"}
                           next: raise_training_error
-                    next: assign_completed
+                    next: generate_thumbnail
                 - raise_training_error:
                     raise: "Training failed"
                 - generate_thumbnail:
                     call: http.post
                     args:
-                      url: ${sys.get_env("IMAGE_GEN_SERVICE_URL")}
+                      url: ${sys.get_env("IMAGE_GEN_SERVICE_URL") + "/generate_images"}
                       body:
                         userId: ${userId}
                         targetId: ${targetId}
                         weightsUrl: ${callback_request.http_request.body.weightsUrl}
                         imagePrompt: "A cinematic portrait photo of a TOK white background"
+                      auth:
+                        type: OIDC
                     result: image_gen_response
                 - assign_completed:
                     assign:
                         - status: ${callback_request.http_request.body.status}
                         - weightsUrl: ${callback_request.http_request.body.weightsUrl}
-                        - thumbnailUrl: ${image_gen_response.http_request.body.images}
+                        - thumbnailUrl: ${image_gen_response.body.images}
                 - record_training_completed:
                     call: http.post
                     args:
