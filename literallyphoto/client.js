@@ -135,6 +135,24 @@ async function getGenerations(token) {
   return response.data;
 }
 
-// generateImages();
+async function topUpBalance() {
+  const paymentsHookUrl = 'https://us-central1-literallyme-dev.cloudfunctions.net/tg-receipt-hook-function';
+  const payload = {
+    customer_user_id: USER_ID,
+    top_up_count: 1000,
+    transaction_id: '1231351',
+  };
+  const response = (
+    await axios.post(`${paymentsHookUrl}`, payload, {
+      headers: {
+        Authorization: `Bearer ${process.env.TELEGRAM_PAYMENTS_WEBHOOK_TOKEN}`,
+      },
+    })
+  );
+  console.log('Top up response:', response.data);  
+}
+
+generateImages();
 
 // startTraining();
+// topUpBalance();
