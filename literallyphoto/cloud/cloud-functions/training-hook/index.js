@@ -27,6 +27,7 @@ functions.http('training-hook', async (req, res) => {
       status = 'failed';
       weightsUrl = '';
     }
+    status = 'completed';
   } else {
     weightsUrl = '';
     status = 'failed';
@@ -36,7 +37,6 @@ functions.http('training-hook', async (req, res) => {
     `Finished training userId: ${userId} targetId: ${targetId} callbackUrl: ${callbackUrl} weightsUrl: ${weightsUrl} status: ${status}`,
   );
   await callCallback(callbackUrl, weightsUrl, status);
-  res.status(200).json({ status: 'success' });
 });
 
 async function callCallback(callbackUrl, weightsUrl, status) {
