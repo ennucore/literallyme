@@ -16,16 +16,16 @@ app.use(express.json());
 app.listen(PORT);
 
 app.post('/record_images_completed', docResolver, async (req, res) => {
-  let { images } = req.body;
+  let { images, status } = req.body;
   console.log(
     `Received request to record images results for ${
       req.docRef.path
-    } images: ${JSON.stringify(images)}`,
+    } images: ${JSON.stringify(images)} status: ${status}`,
   );
   await req.docRef.set(
     {
       images: images,
-      status: 'completed',
+      status: status,
     },
     { merge: true },
   );
@@ -34,14 +34,14 @@ app.post('/record_images_completed', docResolver, async (req, res) => {
 });
 
 app.post('/record_training_completed', docResolver, async (req, res) => {
-  let { weightsUrl } = req.body;
+  let { weightsUrl, status } = req.body;
   console.log(
     `Received request to record training results for ${req.docRef.path} weightsUrl: ${weightsUrl}`,
   );
   await req.docRef.set(
     {
       weightsUrl: weightsUrl,
-      status: 'completed',
+      status: status,
     },
     { merge: true },
   );
