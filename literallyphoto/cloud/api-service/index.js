@@ -36,63 +36,82 @@ app.use(express.json());
 
 app.post(`/start_training`, authenticateUser, async (req, res) => {
   const userId = req.uid;
-  const { targetId } = req.body;
+  const { targetId, targetName } = req.body;
   console.log(
-    `Received request to start training userId ${userId} targetId ${targetId}`,
+    `Received request to start training userId ${userId} targetId ${targetId} targetName ${targetName}`,
   );
+
   if (!(await hasBalanceForTraining(userId))) {
     console.log(`Insufficient balance for training userId ${userId}`);
     res.status(402).send('Insufficient balance for training');
     return;
   }
-  const bucket = storage.bucket(USER_PHOTOS_BUCKET_NAME);
-  const fileName = `${userId}/${targetId}/${USER_PHOTOS_ARCHIVE_NAME}`;
-  const file = bucket.file(fileName);
-  if (await file.exists()) {
-    console.log(`Found photos for userId ${userId} targetId ${targetId}`);
-  } else {
-    console.log(`No photos found for userId ${userId} targetId ${targetId}`);
-    res.status(404).send('No photos found');
-    return;
+
+  try {
+    // Check if the user has photos for the target
+    const bucket = storage.bucket(USER_PHOTOS_BUCKET_NAME);
+    const fileName = `${userId}/${targetId}/${USER_PHOTOS_ARCHIVE_NAME}`;
+    const file = bucket.file(fileName);
+    if (await file.exists()) {
+      console.log(`Found photos for userId ${userId} targetId ${targetId}`);
+    } else {
+      console.log(`No photos found for userId ${userId} targetId ${targetId}`);
+      res.status(404).send('No photos found');
+      return;
+    }
+    const archiveUrl = file.cloudStorageURI;
+    console.log(`Archive URL: ${archiveUrl}`);
+
+    // Create a new user document if it doesn't exist
+    const userDocSnapshot = await firestore.collection('trainings').doc(userId);
+    if (!(await userDocSnapshot.get()).exists) {
+      console.log(
+        `Trainings for user ${userId} not found, creating a new user document`,
+      );
+      await userDocSnapshot.set({
+        created: FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Create a new target document for the user
+    await userDocSnapshot.collection('targets').doc(targetId).set({
+      weightsUrl: '',
+      status: 'processing',
+      targetName: targetName,
+      created: FieldValue.serverTimestamp(),
+    });
+    const docName = `trainings/${userId}/targets/${targetId}`;
+    console.log(
+      `Created target training doc for userId ${userId} targetId ${targetId}`,
+    );
+
+    // Start the training workflow
+    const input = {
+      userId: userId,
+      targetId: targetId,
+      archiveUrl: archiveUrl,
+      docName: docName,
+    };
+    console.log(`Training input: ${JSON.stringify(input)}`);
+    const workflow = executionsClient.workflowPath(
+      PROJECT_ID,
+      'us-central1',
+      TRAINING_WORKFLOW_NAME,
+    );
+    await executionsClient.createExecution({
+      parent: workflow,
+      execution: {
+        argument: JSON.stringify(input),
+      },
+    });
+    console.log(
+      `Started training workflow for userId: ${userId} targetId: ${targetId}`,
+    );
+    res.status(200).json({ status: 'success' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
   }
-  const archiveUrl = file.cloudStorageURI;
-  console.log(`Archive URL: ${archiveUrl}`);
-  const trainingDocRef = firestore
-    .collection('trainings')
-    .doc(userId)
-    .collection('targets')
-    .doc(targetId);
-  await trainingDocRef.set({
-    weightsUrl: '',
-    status: 'processing',
-    created: FieldValue.serverTimestamp(),
-  });
-  const docName = `trainings/${userId}/targets/${targetId}`;
-  console.log(`Created training doc for userId ${userId} targetId ${targetId}`);
-
-  const input = {
-    userId: userId,
-    targetId: targetId,
-    archiveUrl: archiveUrl,
-    docName: docName,
-  };
-  console.log(`Training input: ${JSON.stringify(input)}`);
-  const workflow = executionsClient.workflowPath(
-    PROJECT_ID,
-    'us-central1',
-    TRAINING_WORKFLOW_NAME,
-  );
-
-  await executionsClient.createExecution({
-    parent: workflow,
-    execution: {
-      argument: JSON.stringify(input),
-    },
-  });
-  console.log(
-    `Started training workflow for userId: ${userId} targetId: ${targetId}`,
-  );
-  res.status(200).json({ status: 'success' });
 });
 
 app.post(`/image_generation`, authenticateUser, async (req, res) => {
@@ -102,14 +121,15 @@ app.post(`/image_generation`, authenticateUser, async (req, res) => {
     `Received request to generate photos userId ${userId} targetId ${targetId} imagePrompt ${imagePrompt}`,
   );
 
+  // Check if the user has balance for image generation
   if (!(await hasBalanceForImageGeneration(userId))) {
     console.log(`Insufficient balance for generation userId ${userId}`);
     res.status(402).send('Insufficient balance for generation');
     return;
   }
 
+  // Check if the user has weights for the target
   const weightsUrl = await getWeightsUrl(userId, targetId);
-
   if (weightsUrl === '') {
     console.log(`Weights not found for userId ${userId} targetId ${targetId}`);
     res.status(402).send('Weights not found');
@@ -118,14 +138,23 @@ app.post(`/image_generation`, authenticateUser, async (req, res) => {
   console.log(`Retrieved weightsUrl: ${weightsUrl}`);
 
   try {
-    const targetDocRef = firestore
+    // Create a new user document if there's no generations for userId
+    const userDocSnapshot = firestore
       .collection('image_generations')
-      .doc(userId)
+      .doc(userId);
+    if (!(await userDocSnapshot.get()).exists) {
+      await userDocSnapshot.set({
+        created: FieldValue.serverTimestamp(),
+      });
+      console.log(`Created user document for userId ${userId}`);
+    }
+
+    // Create a new target document if there's no generations for given targetId
+    const targetDocSnapshot = userDocSnapshot
       .collection('targets')
       .doc(targetId);
-    const targetDoc = await targetDocRef.get();
-    if (!targetDoc.exists) {
-      await targetDocRef.set({
+    if (!(await targetDocSnapshot.get()).exists) {
+      await targetDocSnapshot.set({
         created: FieldValue.serverTimestamp(),
       });
       console.log(
@@ -133,18 +162,22 @@ app.post(`/image_generation`, authenticateUser, async (req, res) => {
       );
     }
 
-    const newGeneration = await targetDocRef
+    // Create a new generation document for the targetId
+    const newGeneration = await targetDocSnapshot
       .collection('generations')
       .add({
         images: [],
-        image_prompt: imagePrompt,
+        imagePrompt: imagePrompt,
         status: 'processing',
         created: FieldValue.serverTimestamp(),
       });
-
     const generationId = newGeneration.id;
+
+    // Start image generation workflow
     const docName = `image_generations/${userId}/targets/${targetId}/generations/${generationId}`;
-    console.log(`Created generation document for userId ${userId} targetId ${targetId} generationId ${generationId}`);
+    console.log(
+      `Created generation document for userId ${userId} targetId ${targetId} generationId ${generationId}`,
+    );
     const input = {
       userId: userId,
       targetId: targetId,
@@ -153,93 +186,76 @@ app.post(`/image_generation`, authenticateUser, async (req, res) => {
       generationId: generationId,
       docName: docName,
     };
-
     console.log(`Image generation input: ${JSON.stringify(input)}`);
     const workflow = executionsClient.workflowPath(
       PROJECT_ID,
       'us-central1',
       IMAGE_GENERATION_WORKFLOW_NAME,
     );
-
     await executionsClient.createExecution({
       parent: workflow,
       execution: {
         argument: JSON.stringify(input),
       },
     });
-
     console.log(
       `Started image generation workflow for userId: ${userId} targetId: ${targetId} imagePrompt: ${imagePrompt}`,
     );
 
-    res.status(200).json({ status: 'success' });
+    res.status(200).json({ status: 'success', generationId: generationId });
   } catch (error) {
     console.error(error);
     res.status(500).send('Server error');
   }
 });
 
-app.post('/upload_archive_url', authenticateUser, async (req, res) => {
+app.get('/upload_archive_url', authenticateUser, async (req, res) => {
   const userId = req.uid;
-  let { targetName } = req.body;
-  targetId = crypto.randomUUID();
+  const targetId = crypto.randomUUID();
   const url = await generateV4UploadSignedUrl(userId, targetId);
-  console.log(`upload_archive_url ${url}}`);
-  const userDocRef = firestore.collection('trainings').doc(userId);
-  const userDoc = await userDocRef.get();
-  if (!userDoc.exists) {
-    console.log(`Creating a new parent document for user ${userId}`);
-    await userDocRef.set({
-      created: FieldValue.serverTimestamp(),
-    });
-  }
-  await userDocRef.collection('targets').doc(targetId).set({
-    weightsUrl: '',
-    targetName,
-    status: 'processing',
-    created: FieldValue.serverTimestamp(),
-  });
-  console.log(`Created target ${targetId} for user ${userId}`);
+  console.log(
+    `upload_archive_url ${url} for userId ${userId} targetId ${targetId}`,
+  );
   res.status(200).json({
-    upload_url: url,
-    target_id: targetId,
+    uploadUrl: url,
+    targetId: targetId,
   });
 });
 
 app.get('/get_generations', authenticateUser, async (req, res) => {
   const userId = req.uid;
   console.log(`Retrieving generations for user ${userId}`);
-  const targetsSnapshot = await firestore
+  const targets = await firestore
     .collection('image_generations')
     .doc(userId)
     .collection('targets')
     .get();
 
-  const results = [];
-
+  const data = [];
   // Iterate over each target document
-  for (const targetDoc of targetsSnapshot.docs) {
-    const targetId = targetDoc.id;
+  for (const target of targets.docs) {
+    const targetId = target.id;
     console.log(`Retrieving generations for target ${targetId}`);
-    const generationsSnapshot = await firestore
+    const generations = await firestore
       .collection('image_generations')
       .doc(userId)
       .collection('targets')
       .doc(targetId)
       .collection('generations')
       .get();
-    for (const generationDoc of generationsSnapshot.docs) {
-      const generationId = generationDoc.id;
-      const generationData = generationDoc.data();
-      results.push({
+    for (const generation of generations.docs) {
+      console.log(`Retrieving generation ${generation.id}`);
+      const generationId = generation.id;
+      const generationData = generation.data();
+      data.push({
         targetId,
         generationId,
         ...generationData,
       });
     }
   }
-  console.log(`Retrieved generations for user ${userId}: ${results.length}`);
-  res.status(200).json(results);
+  console.log(`Retrieved generations for user ${userId}: ${data.length}`);
+  res.status(200).json(data);
 });
 
 app.get('/get_targets', authenticateUser, async (req, res) => {
@@ -257,7 +273,7 @@ app.get('/get_targets', authenticateUser, async (req, res) => {
       ...target.data(),
     });
   }
-  console.log(`Retrieved targets for user ${userId}: ${JSON.stringify(data)}`);
+  console.log(`Retrieved targets for user ${userId}: ${data.length}`);
   res.status(200).json(data);
 });
 
