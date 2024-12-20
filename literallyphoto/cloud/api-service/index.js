@@ -245,13 +245,30 @@ app.get('/get_generations', authenticateUser, async (req, res) => {
       .collection('generations')
       .get();
     for (const generation of generations.docs) {
-      console.log(`Retrieving generation ${generation.id}`);
       const generationId = generation.id;
       const generationData = generation.data();
+      const createdDate = generationData.created.toDate();
+      const imagePrompt = generationData.imagePrompt;
+      const status = generationData.status;
+      const images = generationData.images;
+      const signedUrls = [];
+      for (const image of images) {
+        const bucketName = image.split('/')[2];
+        const fileName = image.split('/').slice(3).join('/');
+        const file = storage.bucket(bucketName).file(fileName);
+        const [signedUrl] = await file.getSignedUrl({
+          action: 'read',
+          expires: Date.now() + 60 * 60 * 1000, // 60 minutes
+        });
+        signedUrls.push(signedUrl);
+      }
       data.push({
         targetId,
         generationId,
-        ...generationData,
+        createdDate,
+        imagePrompt,
+        status,
+        signedUrls,
       });
     }
   }
