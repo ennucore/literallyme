@@ -9,6 +9,7 @@ main:
             - weightsUrl: ${args.weightsUrl}
             - generationId: ${args.generationId}
             - docName: ${args.docName}
+            - error: null
     - try_catch_image_generation:
         try:
             steps:
@@ -84,6 +85,16 @@ main:
                             status: ${status}
                         auth:
                             type: OIDC
+                - assign_error:
+                    assign:
+                        - error: ${e}
+    - check_error:
+        switch:
+            - condition: ${error != null}
+              next: raise_again
+        next: return_result
+    - raise_again:
+        raise: ${error}
     - return_result:
         return:
             images: ${images}

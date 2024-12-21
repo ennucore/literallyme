@@ -7,6 +7,8 @@ main:
             - archiveUrl: ${args.archiveUrl}
             - targetId: ${args.targetId}
             - docName: ${args.docName}
+            - imagePrompt: ${args.imagePrompt}
+            - error: null
     - try_catch_training:
         try:
             steps:
@@ -58,7 +60,7 @@ main:
                         userId: ${userId}
                         targetId: ${targetId}
                         weightsUrl: ${callback_request.http_request.body.weightsUrl}
-                        imagePrompt: "A portrait photo of a TOK man white background"
+                        imagePrompt: ${imagePrompt}
                       auth:
                         type: OIDC
                     result: image_gen_response
@@ -66,7 +68,7 @@ main:
                     assign:
                         - status: ${callback_request.http_request.body.status}
                         - weightsUrl: ${callback_request.http_request.body.weightsUrl}
-                        - thumbnailUrl: ${image_gen_response.body.images}
+                        - thumbnailUrl: ${image_gen_response.body.images[0]}
                 - record_training_completed:
                     call: http.post
                     args:
@@ -95,7 +97,7 @@ main:
                     assign:
                         - status: "failed"
                         - weightsUrl: ""
-                        - thumbnailUrl: []
+                        - thumbnailUrl: ""
                 - record_training_failed:
                     call: http.post
                     args:
@@ -107,7 +109,18 @@ main:
                             status: ${status}
                         auth:
                             type: OIDC
+                - assign_error:
+                    assign:
+                        - error: ${e}
+    - check_error:
+        switch:
+            - condition: ${error != null}
+              next: raise_again
+        next: return_result
+    - raise_again:
+        raise: ${error}
     - return_result:
         return:
             weightsUrl: ${weightsUrl}
+            thumbnailUrl: ${thumbnailUrl}
             status: ${status}
