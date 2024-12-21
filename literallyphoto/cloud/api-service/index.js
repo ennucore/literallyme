@@ -1,6 +1,7 @@
 `use strict`;
 
 const express = require('express');
+const RateLimit = require('express-rate-limit');
 const { ExecutionsClient } = require('@google-cloud/workflows');
 const { firestore } = require('./firebase');
 const { FieldValue } = require('@google-cloud/firestore');
@@ -11,8 +12,9 @@ const {
   hasBalanceForTraining,
   getBalance,
 } = require('./balance');
-const { authenticateUser } = require('./middleware');
+const { authenticateJWT, credentials } = require('./middleware');
 const cors = require('cors');
+const corsOptions = require('./corsOptions');
 
 const TRAINING_WORKFLOW_NAME = 'workflow-training';
 const IMAGE_GENERATION_WORKFLOW_NAME = 'workflow-image-generation';
@@ -27,15 +29,25 @@ const storage = new Storage();
 const executionsClient = new ExecutionsClient();
 
 const app = express();
-app.use(cors());
+
+app.use(credentials);
+app.use(cors(corsOptions));
 app.use(authRoutes);
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 app.use(express.raw({ type: 'application/zip', limit: '1Gb' }));
 app.use(express.json());
+const limiter = RateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Max 100 requests per IP
+  message: 'Too many requests from this IP, please try again later.',
+});
 
-app.post(`/start_training`, authenticateUser, async (req, res) => {
+app.use(limiter);
+
+app.post(`/start_training`, authenticateJWT, async (req, res) => {
   const userId = req.uid;
   const { targetId, targetName } = req.body;
   console.log(
@@ -117,7 +129,7 @@ app.post(`/start_training`, authenticateUser, async (req, res) => {
   }
 });
 
-app.post(`/image_generation`, authenticateUser, async (req, res) => {
+app.post(`/image_generation`, authenticateJWT, async (req, res) => {
   const userId = req.uid;
   const { targetId, imagePrompt } = req.body;
   console.log(
@@ -212,7 +224,7 @@ app.post(`/image_generation`, authenticateUser, async (req, res) => {
   }
 });
 
-app.get('/upload_archive_url', authenticateUser, async (req, res) => {
+app.get('/upload_archive_url', authenticateJWT, async (req, res) => {
   const userId = req.uid;
   const targetId = crypto.randomUUID();
   const url = await generateV4UploadSignedUrl(userId, targetId);
@@ -225,7 +237,7 @@ app.get('/upload_archive_url', authenticateUser, async (req, res) => {
   });
 });
 
-app.get('/get_generations', authenticateUser, async (req, res) => {
+app.get('/get_generations', authenticateJWT, async (req, res) => {
   const userId = req.uid;
   console.log(`Retrieving generations for user ${userId}`);
   const targets = await firestore
@@ -273,7 +285,7 @@ app.get('/get_generations', authenticateUser, async (req, res) => {
   res.status(200).json(data);
 });
 
-app.get('/get_targets', authenticateUser, async (req, res) => {
+app.get('/get_targets', authenticateJWT, async (req, res) => {
   const userId = req.uid;
   console.log(`Retrieving targets for user ${userId}`);
   const targets = await firestore
@@ -305,7 +317,7 @@ app.get('/get_targets', authenticateUser, async (req, res) => {
   res.status(200).json(data);
 });
 
-app.get('/get_balance', authenticateUser, async (req, res) => {
+app.get('/get_balance', authenticateJWT, async (req, res) => {
   const userId = req.uid;
   const balance = await getBalance(userId);
   res.status(200).json({ balance });
