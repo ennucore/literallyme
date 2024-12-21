@@ -77,6 +77,7 @@ app.post(`/start_training`, authenticateUser, async (req, res) => {
     // Create a new target document for the user
     await userDocSnapshot.collection('targets').doc(targetId).set({
       weightsUrl: '',
+      thumbnailUrl: '',
       status: 'processing',
       targetName: targetName,
       created: FieldValue.serverTimestamp(),
@@ -92,6 +93,7 @@ app.post(`/start_training`, authenticateUser, async (req, res) => {
       targetId: targetId,
       archiveUrl: archiveUrl,
       docName: docName,
+      imagePrompt: 'A portrait photo of a TOK white background',
     };
     console.log(`Training input: ${JSON.stringify(input)}`);
     const workflow = executionsClient.workflowPath(
@@ -245,13 +247,25 @@ app.get('/get_generations', authenticateUser, async (req, res) => {
       .collection('generations')
       .get();
     for (const generation of generations.docs) {
-      console.log(`Retrieving generation ${generation.id}`);
       const generationId = generation.id;
       const generationData = generation.data();
+      const createdDate = generationData.created.toDate();
+      const imagePrompt = generationData.imagePrompt;
+      const status = generationData.status;
+
+      const images = generationData.images;
+      const imageUrls = [];
+      for (const image of images) {
+        const signedUrl = await getSignedUrlForImage(image);
+        imageUrls.push(signedUrl);
+      }
       data.push({
         targetId,
         generationId,
-        ...generationData,
+        createdDate,
+        imagePrompt,
+        status,
+        imageUrls,
       });
     }
   }
@@ -269,9 +283,22 @@ app.get('/get_targets', authenticateUser, async (req, res) => {
     .get();
   const data = [];
   for (const target of targets.docs) {
+    const targetId = target.id;
+    const targetData = target.data();
+    const status = targetData.status;
+    const targetName = targetData.targetName;
+    const createdDate = targetData.created.toDate();
+
+    let thumbnailUrl = targetData.thumbnailUrl;
+    if (thumbnailUrl !== '') {
+      thumbnailUrl = await getSignedUrlForImage(thumbnailUrl);
+    }
     data.push({
-      targetId: target.id,
-      ...target.data(),
+      targetId,
+      thumbnailUrl,
+      status,
+      targetName,
+      createdDate,
     });
   }
   console.log(`Retrieved targets for user ${userId}: ${data.length}`);
@@ -282,14 +309,6 @@ app.get('/get_balance', authenticateUser, async (req, res) => {
   const userId = req.uid;
   const balance = await getBalance(userId);
   res.status(200).json({ balance });
-});
-
-app.post('/generation_status', authenticateUser, async (req, res) => {
-  pass;
-});
-
-app.post('/training_status', authenticateUser, async (req, res) => {
-  pass;
 });
 
 async function generateV4UploadSignedUrl(userId, targetId) {
@@ -324,4 +343,15 @@ async function getWeightsUrl(userId, targetId) {
     }
   }
   return weightsUrl;
+}
+
+async function getSignedUrlForImage(imageURI) {
+  const bucketName = imageURI.split('/')[2];
+  const fileName = imageURI.split('/').slice(3).join('/');
+  const file = storage.bucket(bucketName).file(fileName);
+  const [signedUrl] = await file.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + 60 * 60 * 1000, // 60 minutes
+  });
+  return signedUrl;
 }

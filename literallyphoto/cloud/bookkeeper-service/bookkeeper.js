@@ -34,7 +34,7 @@ app.post('/record_images_completed', docResolver, async (req, res) => {
 });
 
 app.post('/record_training_completed', docResolver, async (req, res) => {
-  let { weightsUrl, status } = req.body;
+  let { weightsUrl, status, thumbnailUrl } = req.body;
   console.log(
     `Received request to record training results for ${req.docRef.path} weightsUrl: ${weightsUrl}`,
   );
@@ -42,6 +42,7 @@ app.post('/record_training_completed', docResolver, async (req, res) => {
     {
       weightsUrl: weightsUrl,
       status: status,
+      thumbnailUrl: thumbnailUrl,
     },
     { merge: true },
   );
