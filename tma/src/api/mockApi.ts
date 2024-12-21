@@ -23,6 +23,11 @@ export const mockApi = {
     };
   },
 
+  async getBalance() {
+    await delay(50);
+    return 1000;
+  },
+
   async listModels(): Promise<Model[]> {
     await delay(500);
     return [

@@ -142,6 +142,12 @@ export const checkTrainingStatus = async (target_id: string) => {
   return response.data;
 };
 
+export const getBalance = async () => {
+  if (MOCK) return mockApi.getBalance();
+  const response = await api.get('/get_balance');
+  return response.data.balance;
+};
+
 export const listModels = async (): Promise<Model[]> => {
   if (MOCK) return mockApi.listModels();
   const response = await api.get('/list_models');

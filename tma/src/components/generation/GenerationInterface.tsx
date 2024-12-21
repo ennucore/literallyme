@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Model, Pack, GenerationResult, GenerationIdResult } from '../../types';
-import { Send } from 'lucide-react';
+import { Send, Star } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { GradientText } from '../ui/GradientText';
@@ -18,9 +18,10 @@ interface GenerationInterfaceProps {
   model: Model;
   packs: Pack[];
   onGenerate: (prompt: string) => Promise<GenerationIdResult>;
+  balance: number;
 }
 
-export function GenerationInterface({ model, packs, onGenerate }: GenerationInterfaceProps) {
+export function GenerationInterface({ model, packs, onGenerate, balance }: GenerationInterfaceProps) {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [allGenerations, setAllGenerations] = useState<(GenerationResult | GenerationIdResult)[]>([]);
@@ -78,7 +79,10 @@ export function GenerationInterface({ model, packs, onGenerate }: GenerationInte
         <h2 className="text-2xl font-bold mb-2">
           Generate with <GradientText>{model.name}</GradientText>
         </h2>
-        <p className="text-gray-400 mb-6">Enter a prompt or choose a pack below to create amazing images</p>
+        <p className="text-gray-400 mb-2">Enter a prompt or choose a pack below to create amazing images</p>
+        <p className="text-sm text-gray-400 mb-6">
+          Cost: 1 <Star className="w-4 h-4 inline text-yellow-400" /> • Balance: {balance} <Star className="w-4 h-4 inline text-yellow-400" />
+        </p>
         
         <GenerationPrompt
           value={prompt}

@@ -5,7 +5,7 @@ interface UseModelCreationReturn {
   name: string;
   setName: (name: string) => void;
   photos: File[];
-  setPhotos: (photos: File[]) => void;
+  setPhotos: React.Dispatch<React.SetStateAction<File[]>>;
   loading: boolean;
   setLoading: (loading: boolean) => void;
   isValid: boolean;

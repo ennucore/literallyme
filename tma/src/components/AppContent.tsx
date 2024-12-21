@@ -5,7 +5,7 @@ import { ModelCard } from './model/ModelCard';
 import { NewModelCard } from './model/NewModelCard';
 import { ModelCreator } from './model/ModelCreator';
 import { GenerationInterface } from './generation/GenerationInterface';
-import { listModels, downloadModel, generateImage, listPacks, createModel, createModelInvoiceUrl } from '../api/api';
+import { listModels, downloadModel, generateImage, listPacks, createModel, createModelInvoiceUrl, getBalance } from '../api/api';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from './ui/Button';
 import { PageTransition } from './layout/PageTransition';
@@ -18,16 +18,30 @@ export function AppContent() {
   const [models, setModels] = useState<Model[]>([]);
   const [packs, setPacks] = useState<Pack[]>([]);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isCreating, _setIsCreating] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const setIsCreating = (value: boolean) => {
+    _setIsCreating(value);
+    if (value === true) {
+      getWebApp().BackButton.show();
+      getWebApp().BackButton.onClick(() => {
+        setIsCreating(false);
+      });
+    } else {
+      getWebApp().BackButton.hide();
+    }
+  };
 
   useEffect(() => {
     const loadInitialData = async () => {
-      const [modelsList, packsList] = await Promise.all([
+      const [modelsList, packsList, balance] = await Promise.all([
         listModels(),
-        listPacks()
+        listPacks(),
+        getBalance()
       ]);
       setModels(modelsList);
       setPacks(packsList);
+      setBalance(balance);
     };
     loadInitialData();
   }, []);
@@ -35,14 +49,14 @@ export function AppContent() {
 
 
   const handleCreateModel = async (name: string, photos: File[]) => {
-
-    const handleInvoiceCallback = async (status: "paid" | "cancelled" | "failed" | "pending"): Promise<void> => {
-      switch (status) {
-        case 'paid':
-          await createModel(name, photos);
-          break;
+    const handleInvoiceCallback = async (status: "paid" | "cancelled" | "failed" | "pending") => {
+      if (status === 'paid') {
+        await createModel(name, photos);
+        const newBalance = await getBalance();
+        setBalance(newBalance);
       }
     };
+
     getWebApp().openInvoice(createModelInvoiceUrl, handleInvoiceCallback);
   };
 
@@ -59,18 +73,14 @@ export function AppContent() {
             <PageTransition key="creator">
               <div className="max-w-md mx-auto glass-effect rounded-xl p-6">
                 <div className="flex items-center gap-4 mb-8">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setIsCreating(false)}
-                    icon={<ArrowLeft className="w-4 h-4" />}
-                  >
-                    Back
-                  </Button>
                   <h1 className="text-2xl font-bold">
                     <GradientText>Create New Model</GradientText>
                   </h1>
                 </div>
-                <ModelCreator onSubmit={handleCreateModel} />
+                <ModelCreator 
+                  onSubmit={handleCreateModel} 
+                  balance={balance || 0}
+                />
               </div>
             </PageTransition>
           ) : selectedModel ? (
@@ -88,6 +98,7 @@ export function AppContent() {
                   model={selectedModel}
                   packs={packs}
                   onGenerate={(prompt) => generateImage(selectedModel.id, prompt)}
+                  balance={balance}
                 />
               </div>
             </PageTransition>
