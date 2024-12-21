@@ -54,6 +54,7 @@ export function AppContent() {
         await createModel(name, photos);
         const newBalance = await getBalance();
         setBalance(newBalance);
+        createModel(name, photos);
       }
     };
 

@@ -66,13 +66,37 @@ async def photo_handler(message: types.Message):
 async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
     print(f'Received a pre-checkout query! payload: {pre_checkout_query.invoice_payload}')
     user_id = pre_checkout_query.from_user.id
-    pack_id = pre_checkout_query.invoice_payload
-    # set the status to "queued" and add {"paid": int(time.time())} to stages_timestamps
-    pack = await db.StickerPack.from_mongo(pack_id)
-    print(f'Received the pack {pre_checkout_query.invoice_payload} from mongo for the pre-checkout query {pre_checkout_query.id}')
-    pack.stages_timestamps["paid"] = int(time.time())
-    await pack.set_status('queued')
-    print(f'Set the staus to queued, answering the pre-checkout query now')
+    payload = pre_checkout_query.invoice_payload
+
+    if not payload.startswith("literally"):
+        # Handle top-up request
+        import aiohttp
+        import os
+
+        payments_hook_url = 'https://us-central1-literallyme-dev.cloudfunctions.net/tg-receipt-hook-function'
+        topup_token = os.getenv('TOPUP_TOKEN')
+        
+        payload_data = {
+            "customer_user_id": user_id,
+            "top_up_count": pre_checkout_query.total_amount,
+            "transaction_id": str(pre_checkout_query.id)  # Using pre_checkout_query id as transaction_id
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                payments_hook_url,
+                json=payload_data,
+                headers={"Authorization": f"Bearer {topup_token}"}
+            ) as response:
+                print('Top up response:', await response.json())
+    else:
+        # Original sticker pack logic
+        pack = await db.StickerPack.from_mongo(payload)
+        print(f'Received the pack {payload} from mongo for the pre-checkout query {pre_checkout_query.id}')
+        pack.stages_timestamps["paid"] = int(time.time())
+        await pack.set_status('queued')
+        print(f'Set the status to queued, answering the pre-checkout query now')
+    
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 
