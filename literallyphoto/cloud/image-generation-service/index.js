@@ -31,8 +31,15 @@ app.listen(PORT);
 app.use(express.json());
 
 app.post('/generate_images', async (req, res) => {
-  let { userId, targetId, generationId, weightsUrl, imagePrompt, model } =
-    req.body;
+  let {
+    userId,
+    targetId, // TODO: May be it's better to write images to path associated with user
+    generationId,
+    imagePrompt,
+    numImagesToGenerate,
+    weightsUrl,
+    model,
+  } = req.body;
 
   console.log(
     `Received image generation request for User ID: ${userId} prompt: ${imagePrompt}`,
@@ -43,6 +50,10 @@ app.post('/generate_images', async (req, res) => {
       .status(400)
       .json({ error: 'Weights URL is required in the request body' });
     return;
+  }
+
+  if (!numImagesToGenerate) {
+    numImagesToGenerate = 1;
   }
 
   let input = null;
@@ -67,9 +78,11 @@ app.post('/generate_images', async (req, res) => {
 
   try {
     // Generate images
-    const output = await generateImagesWithRetry(generateFunction);
+    const output = await generateImagesWithRetry(
+      generateFunction,
+      numImagesToGenerate,
+    );
     console.log(`Generated ${output.length} images`);
-
     if (output.length === 0) {
       // If no images were generated, respond with failure
       res.status(200).json({ images: [], status: 'failed' });
@@ -141,35 +154,34 @@ async function uploadToStorage(localFilePath) {
 
 async function generateImagesWithRetry(
   generateFunction,
-  targetRunsCount = 1,
+  numImagesToGenerate,
   maxFailedAttempts = 4,
 ) {
   console.log(
-    `Generating images with retry ${maxFailedAttempts} times, target runs: ${targetRunsCount}`,
+    `Generating images with retry ${maxFailedAttempts} times, images to generate: ${numImagesToGenerate}`,
   );
-  let successfulRuns = 0;
+  let generatedImages = [];
   let failedAttempts = 0;
-  let totalOutputs = [];
   let delay = 1000;
 
   while (
     failedAttempts < maxFailedAttempts &&
-    successfulRuns < targetRunsCount
+    generatedImages.length < numImagesToGenerate
   ) {
     try {
       const output = await generateFunction();
       console.log(
-        `Successful image run ${successfulRuns + 1} of ${targetRunsCount}`,
+        `Successful image run ${
+          generatedImages.length + 1
+        } of ${numImagesToGenerate}`,
       );
-      successfulRuns++;
-      totalOutputs = totalOutputs.concat(output);
-
-      if (successfulRuns >= targetRunsCount) {
+      generatedImages = generatedImages.concat(output);
+      if (generatedImages.length >= numImagesToGenerate) {
         break;
       }
     } catch (error) {
       failedAttempts++;
-      console.log(`Failed image pack generation:`, error);
+      console.log(`Failed image generation attempt:`, error);
 
       if (failedAttempts < maxFailedAttempts) {
         console.log(`Retrying in ${delay / 1000} seconds...`);
@@ -179,9 +191,9 @@ async function generateImagesWithRetry(
     }
   }
 
-  if (successfulRuns >= targetRunsCount) {
-    console.log(`Successfully achieved ${targetRunsCount} successful runs.`);
-    return totalOutputs;
+  if (generatedImages.length >= numImagesToGenerate) {
+    console.log(`Successfully generated ${generatedImages.length} images.`);
+    return generatedImages;
   } else {
     return [];
   }
