@@ -7,10 +7,21 @@ main:
             - archiveUrl: ${args.archiveUrl}
             - targetId: ${args.targetId}
             - docName: ${args.docName}
+            - imagePrompt: ${args.imagePrompt}
             - error: null
     - try_catch_training:
         try:
             steps:
+                - try_record_training:
+                    call: http.post
+                    args:
+                      url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
+                      body:
+                        userId: ${userId}
+                        operation: tryRecordTraining
+                      auth:
+                        type: OIDC
+                    result: try_record_training_response
                 - create_callback:
                     call: events.create_callback_endpoint
                     args:
@@ -34,21 +45,30 @@ main:
                         callback: ${callback_details}
                         timeout: 10800
                     result: callback_request
-                - log_callback_request:
-                    call: sys.log
-                    args:
-                        data: ${callback_request}
-                - handle_callback_status:
+                - handle_training_status:
                     switch:
                         - condition: ${callback_request.http_request.body.status == "failed"}
                           next: raise_training_error
-                    next: assign_result
+                    next: generate_thumbnail
                 - raise_training_error:
                     raise: "Training failed"
-                - assign_result:
+                - generate_thumbnail:
+                    call: http.post
+                    args:
+                      url: ${sys.get_env("IMAGE_GEN_SERVICE_URL") + "/generate_images"}
+                      body:
+                        userId: ${userId}
+                        targetId: ${targetId}
+                        weightsUrl: ${callback_request.http_request.body.weightsUrl}
+                        imagePrompt: ${imagePrompt}
+                      auth:
+                        type: OIDC
+                    result: image_gen_response
+                - assign_completed:
                     assign:
-                        - status: 1
+                        - status: ${callback_request.http_request.body.status}
                         - weightsUrl: ${callback_request.http_request.body.weightsUrl}
+                        - thumbnailUrl: ${image_gen_response.body.images[0]}
                 - record_training_completed:
                     call: http.post
                     args:
@@ -56,15 +76,42 @@ main:
                         body:
                             document_path: ${docName}
                             weightsUrl: ${weightsUrl}
+                            thumbnailUrl: ${thumbnailUrl}
+                            status: ${status}
                         auth:
                             type: OIDC
         except:
             as: e
             steps:
+                - refund_training:
+                    call: http.post
+                    args:
+                      url: ${sys.get_env("PAYMENTS_FUNCTION_URL")}
+                      body:
+                        userId: ${userId}
+                        operation: refundTraining
+                      auth:
+                        type: OIDC
+                    result: refund_training_response
+                - assign_failed:
+                    assign:
+                        - status: "failed"
+                        - weightsUrl: ""
+                        - thumbnailUrl: ""
+                - record_training_failed:
+                    call: http.post
+                    args:
+                        url: ${sys.get_env("BOOKKEEPER_SERVICE_URL") + "/record_training_completed"}
+                        body:
+                            document_path: ${docName}
+                            weightsUrl: ${weightsUrl}
+                            thumbnailUrl: ${thumbnailUrl}
+                            status: ${status}
+                        auth:
+                            type: OIDC
                 - assign_error:
                     assign:
                         - error: ${e}
-                        - status: -1
     - check_error:
         switch:
             - condition: ${error != null}
@@ -73,4 +120,7 @@ main:
     - raise_again:
         raise: ${error}
     - return_result:
-        return: ${weightsUrl}
+        return:
+            weightsUrl: ${weightsUrl}
+            thumbnailUrl: ${thumbnailUrl}
+            status: ${status}
